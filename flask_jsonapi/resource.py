@@ -118,21 +118,66 @@ class _ResourceMeta(type):
         return new_class
 
 
+class Attributes(object):
+    def __init__(self, resource):
+        self.resource = resource
+
+    def __getitem__(self, attribute):
+        if attribute not in self.resource._meta.attributes:
+            raise AttributeNotFound(attribute)
+        return getattr(self.resource._model, attribute)
+
+    def __setitem__(self, attribute, value):
+        if attribute not in self.resource._meta.attributes:
+            raise AttributeNotFound(attribute)
+        setattr(self.resource._model, attribute, value)
+
+
+class Relationships(object):
+    def __init__(self, resource):
+        self.resource = resource
+
+    def __getitem__(self, relationship):
+        if relationship not in self.resource._meta.relationships:
+            raise RelationshipNotFound(relationship)
+        related = getattr(self.resource._model, relationship)
+        if isinstance(related, list):
+            return [    ]
+
+    def __setitem__(self, relationship, value):
+        if relationship not in self.resource._meta.relationships:
+            raise RelationshipNotFound(relationship)
+        setattr(self.resource._model, relationship, value)
+
+
 class _BaseResource(object):
+    registry = None
+
     def __init__(self, session, model):
         self.session = session
         self.model = model
+        self.attributes = Attributes(self)
+        self.relationships = Relationships(self)
+
+    @classmethod
+    def register(cls, registry):
+        if cls.registry is not None:
+            raise ResourceAlreadyRegistered
+        cls.registry = registry
+
+    @classmethod
+    def query(cls, session):
+        return session.query(cls.model_cls)
 
     @classmethod
     def find(cls, session):
-        query = session.query(cls.model_cls)
-        for model in query:
+        for model in cls.query(session):
             yield cls(session, model)
 
     @classmethod
     def find_by_id(cls, session, id):
         try:
-            model = session.query(cls.model_cls).filter_by(id=id).one()
+            model = cls.query(session).filter_by(id=id).one()
         except orm.exc.NoResultFound:
             raise ResourceNotFound(id)
         return cls(session, model)

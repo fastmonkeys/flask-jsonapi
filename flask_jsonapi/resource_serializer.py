@@ -1,4 +1,19 @@
+from collections import defaultdict
+
 from flask import url_for
+
+
+def get_collection_url(query_params): #find_link
+    return url_for('jsonapi.get', type='...', **query_params)
+
+def get_individual_resource_url(): # self_href
+    return url_for('jsonapi.get', type='...', id='...')
+
+def get_relationship_url():   # self_link
+    return url_for('jsonapi.get_relationship', type='..', id='...', relationship='...')
+
+def get_related_resource_url():  # related_link
+    return url_for('jsonapi.get_related', type='..', id='...', relationship='...')
 
 
 class ResourceSerializer(object):
@@ -7,10 +22,40 @@ class ResourceSerializer(object):
         self.fields = fields or {}
         self.include = include or []
 
-    def dump(self, source):
-        return {
-            "data": self._dump_resource_object(source)
-        }
+    def dump(self, resources):
+        is_collection = isinstance(resources, list)
+        self.resource_objects = defaultdict(dict)
+        primary_objects = []
+        included_objects = []
+        for objects in self.resource_objects.values():
+            for obj in objects.values():
+                if obj['primary']:
+                    primary_objects.append(obj['data'])
+                else:
+                    included_objects.append(obj['data'])
+
+        document = {}
+        document['data'] = primary_objects if is_collection else primary_objects[0]
+        if included_objects:
+            document['included'] = included_objects
+
+    def _process_primary_resources(self, resources):
+        if isinstance(resources, list):
+            for resource in resources:
+                self._process_primary_resource(resource)
+        elif resources is not None:
+            self._process_primary_resource(resources)
+
+    def _process_primary_resource(self, resource):
+        self._add_resource_object
+        self._make_primary(type=resource._meta.type, id=resource._model.id)
+
+
+    def _has_been_serialized(self, type, id):
+        return (
+            type in self.resource_objects and
+            id in self.resource_objects[type]
+        )
 
     def _dump_resource_object(self, resource):
         resource_object = {
