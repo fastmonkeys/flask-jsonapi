@@ -4,11 +4,12 @@ import os
 from datetime import datetime
 
 import pytest
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
 from bunch import Bunch
-from flask import Flask
 from flask_jsonapi import JSONAPI
+from flask_jsonapi.repository import SQLAlchemyRepository
 from flask_jsonapi.resource import Resource
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -123,48 +124,48 @@ def models(db):
 
 
 @pytest.fixture
-def resources(jsonapi, models):
-    class SeriesResource(Resource):
-        class Meta:
-            type = 'series'
-            model_class = models.Series
-            attributes = ('title',)
-
-    class AuthorResource(Resource):
-        class Meta:
-            type = 'authors'
-            model_class = models.Author
-            attributes = ('name', 'date_of_birth', 'date_of_death')
-
-    class BookResource(Resource):
-        class Meta:
-            type = 'books'
-            model_class = models.Book
-            attributes = ('date_published', 'title')
-            relationships = ('author', 'series')
-
-    class ChapterResource(Resource):
-        class Meta:
-            type = 'chapters'
-            model_class = models.Chapter
-            attributes = ('title', 'ordering')
-            relationships = ('book',)
-
-    class StoreResource(Resource):
-        class Meta:
-            type = 'stores'
-            model_class = models.Store
-            attributes = ('name',)
-            relationships = ('books',)
-
-    resources = [
-        SeriesResource,
-        AuthorResource,
-        BookResource,
-        ChapterResource,
-        StoreResource,
-    ]
-    for resource in resources:
-        jsonapi.register_resource(resource)
-
-    return Bunch({resource.__name__: resource for resource in resources})
+def resources(jsonapi, db, models):
+    jsonapi.resources.register(
+        Resource(
+            type='series',
+            model_class=models.Series,
+            repository=SQLAlchemyRepository(db.session),
+            attributes=('title',)
+        )
+    )
+    jsonapi.resources.register(
+        Resource(
+            type='authors',
+            model_class=models.Author,
+            repository=SQLAlchemyRepository(db.session),
+            attributes=('name', 'date_of_birth', 'date_of_death')
+        )
+    )
+    jsonapi.resources.register(
+        Resource(
+            type='books',
+            model_class=models.Book,
+            repository=SQLAlchemyRepository(db.session),
+            attributes=('date_published', 'title'),
+            relationships=('author', 'series')
+        )
+    )
+    jsonapi.resources.register(
+        Resource(
+            type='chapters',
+            model_class=models.Chapter,
+            repository=SQLAlchemyRepository(db.session),
+            attributes=('title', 'ordering'),
+            relationships=('book',)
+        )
+    )
+    jsonapi.resources.register(
+        Resource(
+            type='stores',
+            model_class=models.Store,
+            repository=SQLAlchemyRepository(db.session),
+            attributes=('name',),
+            relationships=('books',)
+        )
+    )
+    return jsonapi.resources
