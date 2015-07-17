@@ -3,18 +3,58 @@ import qstring
 from . import exc
 
 
-# criteria
-#  - sort
-#  - include
-#  - fields
-#  - filter
-#  - page
-
 class Parameters(object):
-    def __init__(self, request):
-        params = request.args
-        self.include = IncludeParameter(request)
-        self.fields = FieldsParameter()
+    def __init__(self, resources, type, request):
+        params = qstring.nest(request.args.items())
+        self.fields = FieldsParameter(resources, params.get('fields'))
+        self.include = IncludeParameter(resources, type, params.get('include'))
+
+    def __repr__(self):
+        return (
+            '<Parameters '
+            'fields={self.fields!r}, '
+            'include={self.include!r}>'
+        ).format(self=self)
+
+
+class IncludeParameter(object):
+    def __init__(self, resources, type, include):
+        self._resources = resources
+        self._type = type
+        self.raw = include
+        self.tree = {}
+        self._build_tree()
+
+    def _build_tree(self):
+        for path in self._iter_relationship_paths():
+            self._add_relationship_path_to_tree(path)
+
+    def _iter_relationship_paths(self):
+        if self.raw:
+            try:
+                paths = self.raw.split(',')
+            except AttributeError:
+                raise exc.InvalidIncludeValue(self.raw)
+            for path in paths:
+                yield path.split('.')
+
+    def _add_relationship_path_to_tree(self, path):
+        current_node = self.tree
+        resource = self._resources.by_type[self._type]
+        for name in path:
+            if name not in current_node:
+                current_node[name] = {}
+            if name not in resource.relationships:
+                raise exc.InvalidInclude(resource.type, name)
+            related_model_class = resource.repository.get_related_model_class(
+                model_class=resource.model_class,
+                relationship=name
+            )
+            resource = self._resources.by_model_class[related_model_class]
+            current_node = current_node[name]
+
+    def __repr__(self):
+        return '<IncludeParameter {raw!r}>'.format(raw=self.raw)
 
 
 class FieldsParameter(object):

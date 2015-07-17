@@ -1,7 +1,35 @@
 import pytest
+from flask import Request
+from werkzeug.test import EnvironBuilder
 
 from flask_jsonapi import exc
-from flask_jsonapi.params import FieldsParameter
+from flask_jsonapi.params import FieldsParameter, IncludeParameter, Parameters
+
+
+class TestParameters(object):
+    @pytest.fixture
+    def http_request(self):
+        builder = EnvironBuilder(
+            query_string='fields[books]=title&include=books'
+        )
+        env = builder.get_environ()
+        return Request(env)
+
+    @pytest.fixture
+    def params(self, resources, http_request):
+        return Parameters(resources, 'stores', http_request)
+
+    def test_fields(self, params):
+        assert params.fields['books'] == {'title'}
+
+    def test_include(self, params):
+        assert params.include.tree == {'books': {}}
+
+    def test___repr__(self, params):
+        assert repr(params) == (
+            '<Parameters fields={params.fields!r}, '
+            'include={params.include!r}>'
+        ).format(params=params)
 
 
 class TestFieldsParameter(object):
@@ -50,3 +78,36 @@ class TestFieldsParameter(object):
     def test___repr__(self, resources):
         fields = FieldsParameter(resources, fields={'authors': 'name'})
         assert repr(fields) == "<FieldsParameter {'authors': ['name']}>"
+
+
+class TestIncludeParameter(object):
+    @pytest.mark.parametrize(
+        ('include', 'tree'),
+        [
+            ('', {}),
+            ('books', {'books': {}}),
+            ('books.author', {'books': {'author': {}}}),
+            ('books.author,books', {'books': {'author': {}}}),
+        ]
+    )
+    def test_tree(self, resources, include, tree):
+        assert IncludeParameter(resources, 'stores', include).tree == tree
+
+    def test_invalid_relationship(self, resources):
+        with pytest.raises(exc.InvalidInclude) as exc_info:
+            IncludeParameter(resources, 'stores', 'books.invalid')
+        assert exc_info.value.type == 'books'
+        assert exc_info.value.relationship == 'invalid'
+
+    def test_invalid_value(self, resources):
+        with pytest.raises(exc.InvalidIncludeValue) as exc_info:
+            IncludeParameter(resources, 'stores', {'foo': 'bar'})
+        assert exc_info.value.value == {'foo': 'bar'}
+
+    def test___repr__(self, resources):
+        include = IncludeParameter(
+            resources,
+            type='stores',
+            include='books.author,books'
+        )
+        assert repr(include) == "<IncludeParameter 'books.author,books'>"

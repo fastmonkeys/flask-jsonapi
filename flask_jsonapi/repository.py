@@ -1,3 +1,6 @@
+import sqlalchemy
+
+
 class SQLAlchemyRepository(object):
     def __init__(self, session):
         self.session = session
@@ -40,3 +43,11 @@ class SQLAlchemyRepository(object):
 
     def get_related(self, model, relationship):
         return getattr(model, relationship)
+
+    def get_id(self, model):
+        pass
+
+    def get_related_model_class(self, model_class, relationship):
+        mapper = sqlalchemy.inspect(model_class)
+        relationship_property = mapper.relationships[relationship]
+        return relationship_property.mapper.class_

@@ -29,3 +29,14 @@ class InvalidFieldValue(JSONAPIException):
 
 class InvalidFieldFormat(JSONAPIException):
     pass
+
+
+class InvalidInclude(JSONAPIException):
+    def __init__(self, type, relationship):
+        self.type = type
+        self.relationship = relationship
+
+
+class InvalidIncludeValue(JSONAPIException):
+    def __init__(self, value):
+        self.value = value
