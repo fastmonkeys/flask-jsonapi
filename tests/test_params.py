@@ -3,10 +3,11 @@ from flask import Request
 from werkzeug.test import EnvironBuilder
 
 from flask_jsonapi import exc
-from flask_jsonapi.params import FieldsParameter, IncludeParameter, Parameters
+from flask_jsonapi.params import (FieldsParameter, IncludeParameter,
+                                  RequestParameters)
 
 
-class TestParameters(object):
+class TestRequestParameters(object):
     @pytest.fixture
     def http_request(self):
         builder = EnvironBuilder(
@@ -17,7 +18,7 @@ class TestParameters(object):
 
     @pytest.fixture
     def params(self, resources, http_request):
-        return Parameters(resources, 'stores', http_request)
+        return RequestParameters(resources, 'stores', http_request)
 
     def test_fields(self, params):
         assert params.fields['books'] == {'title'}
@@ -27,7 +28,7 @@ class TestParameters(object):
 
     def test___repr__(self, params):
         assert repr(params) == (
-            '<Parameters fields={params.fields!r}, '
+            '<RequestParameters fields={params.fields!r}, '
             'include={params.include!r}>'
         ).format(params=params)
 

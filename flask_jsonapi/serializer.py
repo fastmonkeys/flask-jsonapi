@@ -9,123 +9,60 @@ def get_collection_url(query_params): #find_link
 def get_individual_resource_url(): # self_href
     return url_for('jsonapi.get', type='...', id='...')
 
-def get_relationship_url():   # self_link
-    return url_for('jsonapi.get_relationship', type='..', id='...', relationship='...')
 
-def get_related_resource_url():  # related_link
-    return url_for('jsonapi.get_related', type='..', id='...', relationship='...')
+class ResourceObject(object):
+    def __init__(self, resources, model, params):
+        self.resources = resources
+        self.model = model
+        self.resource = self.resources.by_model_class[model.__class__]
+        self.params = params
 
-#
-# {                                                                             // Top Level
-#   "links": {                                                                  // A Links Object related to the primary data.
-#     "self": "http://example.com/posts",
-#     "next": "http://example.com/posts?page[offset]=2",
-#     "last": "http://example.com/posts?page[offset]=10"
-#   },
-#   "data": [{                                                                  // The document's "primary data"
-#     "type": "posts",
-#     "id": "1",
-#     "attributes": {
-#       "title": "JSON API paints my bikeshed!"
-#     },
-#     "relationships": {
-#       "author": {
-#         "links": {
-#           "self": "http://example.com/posts/1/relationships/author",
-#           "related": "http://example.com/posts/1/author"
-#         },
-#         "data": { "type": "people", "id": "9" }
-#       },
-#       "comments": {
-#         "links": {
-#           "self": "http://example.com/posts/1/relationships/comments",
-#           "related": "http://example.com/posts/1/comments"
-#         },
-#         "data": [
-#           { "type": "comments", "id": "5" },
-#           { "type": "comments", "id": "12" }
-#         ]
-#       }
-#     },
-#     "links": {
-#       "self": "http://example.com/posts/1"
-#     }
-#   }],
-#   "included": [{                                                              // Included resources
-#     "type": "people",
-#     "id": "9",
-#     "attributes": {
-#       "first-name": "Dan",
-#       "last-name": "Gebhardt",
-#       "twitter": "dgeb"
-#     },
-#     "links": {
-#       "self": "http://example.com/people/9"
-#     }
-#   }, {
-#     "type": "comments",
-#     "id": "5",
-#     "attributes": {
-#       "body": "First!"
-#     },
-#     "links": {
-#       "self": "http://example.com/comments/5"
-#     }
-#   }, {
-#     "type": "comments",
-#     "id": "12",
-#     "attributes": {
-#       "body": "I like XML better"
-#     },
-#     "links": {
-#       "self": "http://example.com/comments/12"
-#     }
-#   }]
-# }
-
-class ResourceIdentifier(object):
-    def dump(self, model):
-        resource = self.resources.find_by_model(model)
-        return {
-            "id": resource.repository.get_id(model),
+    @property
+    def data(self):
+        resource_object = {
+            "id": model.id,
             "type": resource.type,
         }
 
+        attributes_object = self.attributes
+        if attributes_object:
+            resource_object["attributes"] = attributes_object
 
-class AttributesObject(object):
-    def dump(self, model):
-        resource = self.resources.find_by_model(model)
-        attributes = resource.attributes
-        requested = self.fields.get(resource.type)
-        if requested is not None:
-            attributes = attributes & requested
+        relationships_object = self.relationships
+        if relationships_object:
+            resource_object["relationships"] = relationships_object
+
+        links_object = self._dump_links_object(resource)
+        if links_object:
+            resource_object["links"] = links_object
+
+        return resource_object
+
+    @property
+    def attributes(self):
+        attributes = self.params.fields[self.resource.type] & self.resource.attributes
         return {
-            attr: resource.repository.get_attribute(attr)
+            attr: self.resource.repository.get_attribute(attr)
             for attr in attributes
         }
 
-
-class RelationshipsObject(object):
-    def dump(self, model):
-        resource = self.resources.find_by_model(model)
-        relationships = resource.relationships
-        requested = self.fields.get(resource.type)
-        if requested is not None:
-            relationships = relationships & requested
+    @property
+    def relationships(self):
+        relationships = self.params.fields[self.resource.type] & self.resource.relationships
         return {
             relationship: RelationshipObject().dump(model, relationship)
             for relationship in relationships
         }
 
+    def _build_relationship_object(self, relationship):
 
-class RelationshipObject(object):
-    def __init__(self, resource, model, relationship):
-        self.resource = resource
-        self.model = model
-        self.relationship = relationship
+
+class RelationshipObjectSerializer(object):
+    def __init__(self, resource_registry):
+        self.resource_registry = resource_registry
 
     @property
-    def data(self):
+    def data(self   ):
         related = self.resource.repository.get_related(self.model, self.relationship)
         if self.resource.repository.is_to_many_relationship(self.model, self.relationship):
             return [
@@ -165,31 +102,6 @@ class RelationshipObject(object):
             "links": self.links,
             "data": self.data
         }
-
-
-class ResourceObject(object):
-    def __init__(self, resources):
-        self.resources = resources
-
-    def dump(self, model):
-        resource = self.resources.find_by_model(model)
-        resource_object = ResourceIdentifier(self.resources).dump(model)
-
-        attributes_object = AttributesObject(self.resources).dump(model)
-        if attributes_object:
-            resource_object["attributes"] = attributes_object
-
-        relationships_object = RelationshipsObject(resource).dump(model)
-        if relationships_object:
-            resource_object["relationships"] = relationships_object
-
-        links_object = self._dump_links_object(resource)
-        if links_object:
-            resource_object["links"] = links_object
-
-        return resource_object
-
-
 
 
 

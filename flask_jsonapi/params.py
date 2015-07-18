@@ -3,7 +3,7 @@ import qstring
 from . import exc
 
 
-class Parameters(object):
+class RequestParameters(object):
     def __init__(self, resources, type, request):
         params = qstring.nest(request.args.items())
         self.fields = FieldsParameter(resources, params.get('fields'))
@@ -11,7 +11,7 @@ class Parameters(object):
 
     def __repr__(self):
         return (
-            '<Parameters '
+            '<RequestParameters '
             'fields={self.fields!r}, '
             'include={self.include!r}>'
         ).format(self=self)
