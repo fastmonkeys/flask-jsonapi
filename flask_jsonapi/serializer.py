@@ -1,4 +1,3 @@
-from collections import defaultdict
 import itertools
 
 from flask import url_for
@@ -89,7 +88,10 @@ class Serializer(object):
     def _dump_relationship_object(self, model, relationship):
         resource = self._get_resource(model)
         related = resource.repository.get_related(model, relationship)
-        if resource.repository.is_to_many_relationship(model.__class__, relationship):
+        if resource.repository.is_to_many_relationship(
+            model.__class__,
+            relationship
+        ):
             data = [self._dump_resource_identifier(m) for m in related]
         else:
             data = self._dump_resource_identifier(related)
@@ -128,7 +130,10 @@ class Serializer(object):
         resource = self._get_resource(model)
         repository = resource.repository
         for relationship in include:
-            if repository.is_to_many_relationship(model.__class__, relationship):
+            if repository.is_to_many_relationship(
+                model.__class__,
+                relationship
+            ):
                 related_models = repository.get_related(model, relationship)
                 for related_model in related_models:
                     yield related_model

@@ -3,7 +3,7 @@ import datetime
 import pytest
 
 from flask_jsonapi.params import RequestParameters
-from flask_jsonapi.serialization import Serializer
+from flask_jsonapi.serializer import Serializer
 
 
 @pytest.fixture

@@ -1,5 +1,3 @@
-import qstring
-
 from . import exc
 
 

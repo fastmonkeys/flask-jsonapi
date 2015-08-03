@@ -1,10 +1,11 @@
 import pytest
-from flask import Request
-from werkzeug.test import EnvironBuilder
 
 from flask_jsonapi import exc
-from flask_jsonapi.params import (FieldsParameter, IncludeParameter,
-                                  RequestParameters)
+from flask_jsonapi.params import (
+    FieldsParameter,
+    IncludeParameter,
+    RequestParameters
+)
 
 
 class TestRequestParameters(object):

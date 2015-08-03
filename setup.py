@@ -22,11 +22,21 @@ setup(
         open('CHANGES.rst').read()
     ),
     author='Janne Vanhala',
-    author_email='janne.vanhala@gmail.com',
-    url='http://github.com/jpvanhal/jsonapi',
+    author_email='janne@fastmonkeys.com',
+    url='http://github.com/fastmonkeys/flask-jsonapi',
     packages=[
         'flask_jsonapi',
     ],
+    install_requires=[
+        'Flask',
+        'Flask-SQLAlchemy',
+        'qstring',
+    ],
+    extras_require={
+        'tests': [
+            'bunch',
+        ],
+    },
     package_data={
         '': ['LICENSE']
     },
