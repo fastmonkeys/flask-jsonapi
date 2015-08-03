@@ -20,6 +20,9 @@ class InvalidField(JSONAPIException):
         self.type = type
         self.field = field
 
+    def __str__(self):
+        return '{self.type}.{self.field}'.format(self=self)
+
 
 class InvalidFieldValue(JSONAPIException):
     def __init__(self, type, value):
@@ -35,6 +38,9 @@ class InvalidInclude(JSONAPIException):
     def __init__(self, type, relationship):
         self.type = type
         self.relationship = relationship
+
+    def __str__(self):
+        return '{self.type}.{self.relationship}'.format(self=self)
 
 
 class InvalidIncludeValue(JSONAPIException):

@@ -96,7 +96,7 @@ def models(db):
             db.ForeignKey(Author.id),
             nullable=False
         )
-        author = db.relationship(Author)
+        author = db.relationship(Author, backref='books')
         series_id = db.Column(db.Integer, db.ForeignKey(Series.id))
         series = db.relationship(Series)
         date_published = db.Column(db.Date, nullable=False)
@@ -106,9 +106,12 @@ def models(db):
         __tablename__ = 'chapters'
         id = db.Column(db.Integer, primary_key=True)
         book_id = db.Column(db.Integer, db.ForeignKey(Book.id), nullable=False)
-        book = db.relationship(Book)
         title = db.Column(db.Text, nullable=False)
         ordering = db.Column(db.Integer, nullable=False)
+        book = db.relationship(
+            Book,
+            backref=db.backref('chapters', order_by=ordering)
+        )
 
     class Store(db.Model):
         __tablename__ = 'stores'
@@ -138,7 +141,8 @@ def resources(jsonapi, db, models):
             type='authors',
             model_class=models.Author,
             repository=SQLAlchemyRepository(db.session),
-            attributes=('name', 'date_of_birth', 'date_of_death')
+            attributes=('name', 'date_of_birth', 'date_of_death'),
+            relationships=('books',)
         )
     )
     jsonapi.resources.register(
@@ -147,7 +151,7 @@ def resources(jsonapi, db, models):
             model_class=models.Book,
             repository=SQLAlchemyRepository(db.session),
             attributes=('date_published', 'title'),
-            relationships=('author', 'series')
+            relationships=('author', 'chapters', 'series')
         )
     )
     jsonapi.resources.register(

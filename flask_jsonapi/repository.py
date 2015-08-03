@@ -48,3 +48,14 @@ class SQLAlchemyRepository(object):
         mapper = sqlalchemy.inspect(model_class)
         relationship_property = mapper.relationships[relationship]
         return relationship_property.mapper.class_
+
+    def get_attribute(self, model, attribute):
+        return getattr(model, attribute)
+
+    def get_id(self, model):
+        return str(model.id)
+
+    def is_to_many_relationship(self, model_class, relationship):
+        mapper = sqlalchemy.inspect(model_class)
+        relationship_property = mapper.relationships[relationship]
+        return relationship_property.uselist

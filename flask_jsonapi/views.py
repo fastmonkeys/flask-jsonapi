@@ -28,7 +28,7 @@ def get_related(type, id, relationship):
     pass
 
 
-@blueprint.route('/<type>/<id>/links/<relationship>', methods=['GET'])
+@blueprint.route('/<type>/<id>/relationships/<relationship>', methods=['GET'])
 def get_relationship(type, id, relationship):
     pass
 
@@ -43,16 +43,16 @@ def update(type, id):
     pass
 
 
-@blueprint.route('/<type>/<id>/links/<relationship>', methods=['PATCH'])
+@blueprint.route('/<type>/<id>/relationships/<relationship>', methods=['PATCH'])
 def update_relationship(type, id):
     pass
 
 
-@blueprint.route('/<type>/<id>/links/<relationship>', methods=['POST'])
+@blueprint.route('/<type>/<id>/relationships/<relationship>', methods=['POST'])
 def add_to_relationship(type, id):
     pass
 
 
-@blueprint.route('/<type>/<id>/links/<relationship>', methods=['DELETE'])
+@blueprint.route('/<type>/<id>/relationships/<relationship>', methods=['DELETE'])
 def delete_from_relationship(type, id):
     pass

@@ -9,16 +9,17 @@ from flask_jsonapi.params import (FieldsParameter, IncludeParameter,
 
 class TestRequestParameters(object):
     @pytest.fixture
-    def http_request(self):
-        builder = EnvironBuilder(
-            query_string='fields[books]=title&include=books'
+    def params(self, resources):
+        return RequestParameters(
+            resources,
+            type='stores',
+            args={
+                'fields': {
+                    'books': 'title'
+                },
+                'include': 'books',
+            }
         )
-        env = builder.get_environ()
-        return Request(env)
-
-    @pytest.fixture
-    def params(self, resources, http_request):
-        return RequestParameters(resources, 'stores', http_request)
 
     def test_fields(self, params):
         assert params.fields['books'] == {'title'}
@@ -37,12 +38,18 @@ class TestFieldsParameter(object):
     def test_missing_fields_parameter(self, resources):
         fields = FieldsParameter(resources, fields=None)
         assert fields['series'] == {'title'}
-        assert fields['authors'] == {'name', 'date_of_birth', 'date_of_death'}
+        assert fields['authors'] == {
+            'books',
+            'date_of_birth',
+            'date_of_death',
+            'name',
+        }
         assert fields['books'] == {
-            'date_published',
-            'title',
             'author',
+            'chapters',
+            'date_published',
             'series',
+            'title',
         }
         assert fields['chapters'] == {'title', 'ordering', 'book'}
         assert fields['stores'] == {'name', 'books'}

@@ -1,168 +1,138 @@
 from collections import defaultdict
+import itertools
 
 from flask import url_for
 
 
-def get_collection_url(query_params): #find_link
-    return url_for('jsonapi.get', type='...', **query_params)
+class Serializer(object):
+    def __init__(self, resource_registry, params):
+        self._resource_registry = resource_registry
+        self._params = params
 
-def get_individual_resource_url(): # self_href
-    return url_for('jsonapi.get', type='...', id='...')
+    def dump(self, input_, many=False):
+        self._included_resource_objects = set()
+        data = self._dump_primary_data(input_, many)
+        included = self._dump_included_data(input_, many)
+        document = {
+            "data": data
+        }
+        if included:
+            document["included"] = included
+        return document
 
+    def _dump_primary_data(self, input_, many):
+        if many:
+            return [self._dump_resource_object(model) for model in input_]
+        else:
+            return self._dump_resource_object(input_)
 
-class ResourceObject(object):
-    def __init__(self, resources, model, params):
-        self.resources = resources
-        self.model = model
-        self.resource = self.resources.by_model_class[model.__class__]
-        self.params = params
+    def _dump_included_data(self, input_, many):
+        input_ = input_ if many else [input_]
+        models = itertools.chain.from_iterable(
+            self._iter_included_models(model, self._params.include.tree)
+            for model in input_
+        )
+        return [
+            self._dump_resource_object(model)
+            for model in models
+            if not self._has_already_been_included(model)
+        ]
 
-    @property
-    def data(self):
+    def _dump_resource_object(self, model):
+        resource = self._get_resource(model)
+        identifier = (resource.type, resource.repository.get_id(model))
+        self._included_resource_objects.add(identifier)
+
         resource_object = {
-            "id": model.id,
+            "id": resource.repository.get_id(model),
             "type": resource.type,
         }
 
-        attributes_object = self.attributes
+        attributes_object = self._dump_attributes_object(resource, model)
         if attributes_object:
             resource_object["attributes"] = attributes_object
 
-        relationships_object = self.relationships
+        relationships_object = self._dump_relationships_object(resource, model)
         if relationships_object:
             resource_object["relationships"] = relationships_object
 
-        links_object = self._dump_links_object(resource)
-        if links_object:
-            resource_object["links"] = links_object
-
-        return resource_object
-
-    @property
-    def attributes(self):
-        attributes = self.params.fields[self.resource.type] & self.resource.attributes
-        return {
-            attr: self.resource.repository.get_attribute(attr)
-            for attr in attributes
-        }
-
-    @property
-    def relationships(self):
-        relationships = self.params.fields[self.resource.type] & self.resource.relationships
-        return {
-            relationship: RelationshipObject().dump(model, relationship)
-            for relationship in relationships
-        }
-
-    def _build_relationship_object(self, relationship):
-
-
-class RelationshipObjectSerializer(object):
-    def __init__(self, resource_registry):
-        self.resource_registry = resource_registry
-
-    @property
-    def data(self   ):
-        related = self.resource.repository.get_related(self.model, self.relationship)
-        if self.resource.repository.is_to_many_relationship(self.model, self.relationship):
-            return [
-                ResourceIdentifier(self.resource, model).dump()
-                for model in related
-            ]
-        else:
-            return ResourceIdentifier(self.resource, related).dump()
-
-    @property
-    def links(self):
-        return {
-            "self": self.self_link,
-            "related": self.related_link
-        }
-
-    @property
-    def self_link(self):
-        return url_for(
-            'jsonapi.get_relationship',
-            type=self.resource.type,
-            id=self.resource.repository.get_id(self.model),
-            relationship=self.relationship
-        )
-
-    @property
-    def related_link(self):
-        return url_for(
-            'jsonapi.get_related',
-            type=self.resource.type,
-            id=self.resource.repository.get_id(self.model),
-            relationship=self.relationship
-        )
-
-    def dump(self):
-        return {
-            "links": self.links,
-            "data": self.data
-        }
-
-
-
-class Document(object):
-    def __init__(self, resources, fields=None, include=None):
-        self.resources = resources
-        self.fields = fields or {}
-        self.include = include or []
-
-    def dump(self, input):
-        is_collection = isinstance(resources, list)
-        self.included_resource_objects = set()
-        primary_objects = []
-        included_objects = []
-        for objects in self.resource_objects.values():
-            for obj in objects.values():
-                if obj['primary']:
-                    primary_objects.append(obj['data'])
-                else:
-                    included_objects.append(obj['data'])
-
-        document = {}
-        document['data'] = primary_objects if is_collection else primary_objects[0]
-        if included_objects:
-            document['included'] = included_objects
-
-    def _process_primary_resources(self, resources):
-        if isinstance(resources, list):
-            for resource in resources:
-                self._process_primary_resource(resource)
-        elif resources is not None:
-            self._process_primary_resource(resources)
-
-    def _has_been_serialized(self, type, id):
-        return (type, id) in self.included_resource_objects
-
-    def _dump_links_object(self, resource):
-        return {
+        resource_object["links"] = {
             "self": url_for(
                 'jsonapi.get',
-                type=resource._meta.type,
-                id=resource.model.id
+                type=resource_object["type"],
+                id=resource_object["id"]
             )
         }
 
-    def _dump_links_object_for_relationship(self, resource, relationship):
-        relationship_property = getattr(resource._meta.model_class, name)
-        if relationship_property.uselist:
-            pass
-        else:
-            pass
+        return resource_object
 
-    def iter_included_models(self, model, include):
-        resource = self.resources._by_model_class[model.__class__]
+    def _get_resource(self, model):
+        return self._resource_registry.by_model_class[model.__class__]
+
+    def _dump_attributes_object(self, resource, model):
+        attributes = self._params.fields[resource.type] & resource.attributes
+        return {
+            attr: resource.repository.get_attribute(model, attr)
+            for attr in attributes
+        }
+
+    def _dump_relationships_object(self, resource, model):
+        relationships = (
+            self._params.fields[resource.type] &
+            resource.relationships
+        )
+        return {
+            relationship: self._dump_relationship_object(model, relationship)
+            for relationship in relationships
+        }
+
+    def _dump_relationship_object(self, model, relationship):
+        resource = self._get_resource(model)
+        related = resource.repository.get_related(model, relationship)
+        if resource.repository.is_to_many_relationship(model.__class__, relationship):
+            data = [self._dump_resource_identifier(m) for m in related]
+        else:
+            data = self._dump_resource_identifier(related)
+        return {
+            "links": {
+                "self": url_for(
+                    'jsonapi.get_relationship',
+                    type=resource.type,
+                    id=resource.repository.get_id(model),
+                    relationship=relationship
+                ),
+                "related": url_for(
+                    'jsonapi.get_related',
+                    type=resource.type,
+                    id=resource.repository.get_id(model),
+                    relationship=relationship
+                ),
+            },
+            "data": data
+        }
+
+    def _dump_resource_identifier(self, model):
+        if model is not None:
+            resource = self._get_resource(model)
+            return {
+                "type": resource.type,
+                "id": resource.repository.get_id(model)
+            }
+
+    def _has_already_been_included(self, model):
+        resource = self._get_resource(model)
+        identifier = (resource.type, resource.repository.get_id(model))
+        return identifier in self._included_resource_objects
+
+    def _iter_included_models(self, model, include):
+        resource = self._get_resource(model)
         repository = resource.repository
         for relationship in include:
-            if repository.is_to_many_relationship(model, relationship):
+            if repository.is_to_many_relationship(model.__class__, relationship):
                 related_models = repository.get_related(model, relationship)
                 for related_model in related_models:
                     yield related_model
-                    for m in self.iter_included_models(
+                    for m in self._iter_included_models(
                         related_model,
                         include[relationship]
                     ):
@@ -171,7 +141,7 @@ class Document(object):
                 related_model = repository.get_related(model, relationship)
                 if related_model is not None:
                     yield related_model
-                    for m in self.iter_included_models(
+                    for m in self._iter_included_models(
                         related_model,
                         include[relationship]
                     ):

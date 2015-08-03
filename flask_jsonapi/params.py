@@ -4,10 +4,9 @@ from . import exc
 
 
 class RequestParameters(object):
-    def __init__(self, resources, type, request):
-        params = qstring.nest(request.args.items())
-        self.fields = FieldsParameter(resources, params.get('fields'))
-        self.include = IncludeParameter(resources, type, params.get('include'))
+    def __init__(self, resources, type, args):
+        self.fields = FieldsParameter(resources, args.get('fields'))
+        self.include = IncludeParameter(resources, type, args.get('include'))
 
     def __repr__(self):
         return (
