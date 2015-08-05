@@ -8,9 +8,6 @@ class SQLAlchemyRepository(object):
     def __init__(self, session):
         self.session = session
 
-    def query(self, model_class):
-        return self.session.query(model_class)
-
     def find(self, model_class, include=None, pagination=None):
         query = self.query(model_class)
         query = self._include_related(query, include)
@@ -27,6 +24,9 @@ class SQLAlchemyRepository(object):
 
     def find_count(self, model_class):
         return self.query(model_class).count()
+
+    def query(self, model_class):
+        return self.session.query(model_class)
 
     def _include_related(self, query, include):
         paths = [] if include is None else include.paths

@@ -15,10 +15,10 @@ class Pagination(object):
 
 
 class OffsetPagination(Pagination):
-    def __init__(self, offset, limit, total):
+    def __init__(self, offset, limit, count):
         self.offset = offset
         self.limit = limit
-        self.total = total
+        self.count = count
 
     @property
     def first(self):
@@ -40,7 +40,7 @@ class OffsetPagination(Pagination):
 
     @property
     def has_next(self):
-        return self.offset + self.limit < self.total
+        return self.offset + self.limit < self.count
 
     @property
     def next(self):
@@ -52,16 +52,22 @@ class OffsetPagination(Pagination):
     @property
     def last(self):
         return {
-            'offset': self.total - self.offset,
+            'offset': self.count - self.offset,
             'limit': self.limit
         }
 
+    def __repr__(self):
+        return '<OffsetPagination offset={offset} limit={limit}>'.format(
+            offset=self.offset,
+            limit=self.limit
+        )
+
 
 class PagedPagination(Pagination):
-    def __init__(self, number, size, total):
+    def __init__(self, number, size, count):
         self.number = number
         self.size = size
-        self.total = total
+        self.count = count
 
     @property
     def first(self):
@@ -109,7 +115,13 @@ class PagedPagination(Pagination):
 
     @property
     def pages(self):
-        return int(math.ceil(self.total / float(self.size)))
+        return int(math.ceil(self.count / float(self.size)))
+
+    def __repr__(self):
+        return '<PagedPagination number={number} size={size}>'.format(
+            number=self.number,
+            size=self.size
+        )
 
 
 class Paginator(object):
@@ -117,16 +129,16 @@ class Paginator(object):
         self.max_page_size = max_page_size
         self.default_page_size = default_page_size
 
-    def paginate(self, params, total):
+    def paginate(self, params, count):
         self._check_extra_params(params)
         params = self._validate(params)
-        return self.pagination_class(total=total, **params)
+        return self.pagination_class(count=count, **params)
 
     def _check_extra_params(self, params):
         try:
             keys = params.keys()
         except AttributeError:
-            raise exc.InvalidPageValue('invalid value for page parameter')
+            raise exc.InvalidPageValue(None, 'invalid value for page parameter')
         extra_params = set(keys) - self.allowed_params
         if extra_params:
             raise exc.PageParametersNotAllowed(extra_params)
@@ -143,25 +155,26 @@ class OffsetPaginator(Paginator):
         try:
             params['offset'] = int(params.get('offset', 0))
         except ValueError:
-            raise exc.InvalidPageValue('offset must be an integer')
+            raise exc.InvalidPageValue('offset', 'offset must be an integer')
 
         try:
             params['limit'] = int(params.get('limit', self.default_page_size))
         except ValueError:
-            raise exc.InvalidPageValue('limit must be an integer')
+            raise exc.InvalidPageValue('limit', 'limit must be an integer')
 
         if params['limit'] < 1:
-            raise exc.InvalidPageValue('limit must be at least 1')
+            raise exc.InvalidPageValue('limit', 'limit must be at least 1')
 
         if params['limit'] > self.max_page_size:
             raise exc.InvalidPageValue(
+                'limit',
                 'limit cannot exceed maximum page size of {}'.format(
                     self.max_page_size
                 )
             )
 
         if params['offset'] < 0:
-            raise exc.InvalidPageValue('offset must be at least 0')
+            raise exc.InvalidPageValue('offset', 'offset must be at least 0')
 
         return params
 
@@ -174,24 +187,25 @@ class PagedPaginator(Paginator):
         try:
             params['number'] = int(params.get('number', 1))
         except ValueError:
-            raise exc.InvalidPageValue('number must be an integer')
+            raise exc.InvalidPageValue('number', 'number must be an integer')
 
         try:
             params['size'] = int(params.get('size', self.default_page_size))
         except ValueError:
-            raise exc.InvalidPageValue('size must be an integer')
+            raise exc.InvalidPageValue('size', 'size must be an integer')
 
         if params['size'] < 1:
-            raise exc.InvalidPageValue('size must be at least 1')
+            raise exc.InvalidPageValue('size', 'size must be at least 1')
 
         if params['size'] > self.max_page_size:
             raise exc.InvalidPageValue(
+                'size',
                 'size cannot exceed maximum page size of {}'.format(
                     self.max_page_size
                 )
             )
 
         if params['number'] < 1:
-            raise exc.InvalidPageValue('number must be at least 1')
+            raise exc.InvalidPageValue('number', 'number must be at least 1')
 
         return params

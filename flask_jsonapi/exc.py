@@ -1,21 +1,30 @@
-class ResourceAlreadyRegistered(Exception):
+from werkzeug.exceptions import BadRequest, NotFound
+
+from . import error_codes
+
+
+class JSONAPIError(Exception):
     pass
 
 
-class FieldNamingConflict(Exception):
+class ResourceAlreadyRegistered(JSONAPIError):
     pass
 
 
-class JSONAPIException(Exception):
+class FieldNamingConflict(JSONAPIError):
     pass
 
 
-class InvalidResource(JSONAPIException):
+class RequestError(JSONAPIError):
+    pass
+
+
+class InvalidResource(RequestError):
     def __init__(self, type):
         self.type = type
 
 
-class InvalidField(JSONAPIException):
+class InvalidField(RequestError):
     def __init__(self, type, field):
         self.type = type
         self.field = field
@@ -24,17 +33,28 @@ class InvalidField(JSONAPIException):
         return '{self.type}.{self.field}'.format(self=self)
 
 
-class InvalidFieldValue(JSONAPIException):
+class InvalidFieldValue(RequestError):
     def __init__(self, type, value):
         self.type = type
         self.value = value
 
 
-class InvalidFieldFormat(JSONAPIException):
-    pass
+class InvalidFieldsFormat(RequestError):
+    @property
+    def errors(self):
+        return [
+            {
+                "code": error_codes.INVALID_FIELDS_FORMAT,
+                "status": BadRequest.code,
+                "title": "Invalid fields format",
+                "source": {
+                    "parameter": "fields"
+                }
+            }
+        ]
 
 
-class InvalidInclude(JSONAPIException):
+class InvalidInclude(RequestError):
     def __init__(self, type, relationship):
         self.type = type
         self.relationship = relationship
@@ -43,20 +63,68 @@ class InvalidInclude(JSONAPIException):
         return '{self.type}.{self.relationship}'.format(self=self)
 
 
-class InvalidIncludeValue(JSONAPIException):
+class InvalidIncludeValue(RequestError):
     def __init__(self, value):
         self.value = value
 
 
-class ResourceNotFound(JSONAPIException):
+class InvalidResource(RequestError):
+    def __init__(self, type_):
+        self.type = type_
+
+    @property
+    def errors(self):
+        return [
+            {
+                "code": error_codes.INVALID_RESOURCE,
+                "status": NotFound.code,
+                "title": "Invalid resource",
+                "detail": (
+                    "{type} is not a valid resource".format(type=self.type)
+                )
+            }
+        ]
+
+
+class ResourceNotFound(RequestError):
     def __init__(self, id):
         self.id = id
 
+    @property
+    def errors(self):
+        return [
+            {
+                "code": error_codes.RESOURCE_NOT_FOUND,
+                "status": NotFound.code,
+                "title": "Resource not found",
+                "detail": (
+                    "The resource identified by {id} could not be "
+                    "found.".format(id=self.id)
+                )
+            }
+        ]
 
-class PageParametersNotAllowed(JSONAPIException):
+
+class PageParametersNotAllowed(RequestError):
     def __init__(self, params):
         self.params = params
 
 
-class InvalidPageValue(JSONAPIException):
-    pass
+class InvalidPageValue(RequestError):
+    def __init__(self, param, message):
+        self.param = param
+        self.message = message
+
+    @property
+    def errors(self):
+        return [
+            {
+                "status": BadRequest.code,
+                "code": error_codes.INVALID_PAGE_VALUE,
+                "title": "Invalid page value",
+                "detail": self.message,
+                "source": {
+                    "parameter": "page[{param}]".format(param=self.param)
+                }
+            }
+        ]

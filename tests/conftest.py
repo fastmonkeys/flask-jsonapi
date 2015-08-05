@@ -1,13 +1,15 @@
 
 import json
 import os
-from datetime import datetime
+from datetime import date, datetime
 
 import pytest
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-
 from bunch import Bunch
+from flask import Flask, Response
+from flask.json import JSONEncoder as _JSONEncoder
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.http import http_date
+
 from flask_jsonapi import JSONAPI
 from flask_jsonapi.repository import SQLAlchemyRepository
 from flask_jsonapi.resource import Resource
@@ -21,12 +23,27 @@ FANTASY_DATABASE_FILENAME = os.path.join(
 )
 
 
+class JSONResponse(Response):
+    @property
+    def json(self):
+        return json.loads(self.data)
+
+
+class JSONEncoder(_JSONEncoder):
+    def default(self, o):
+        if isinstance(o, date):
+            return o.isoformat()
+        return JSONEncoder.default(self, o)
+
+
 @pytest.yield_fixture
 def app():
     app = Flask(__name__)
     app.config['SERVER_NAME'] = 'example.com'
     app.config['SQLALCHEMY_ENGINE'] = 'sqlite://'
     app.config['TESTING'] = True
+    app.response_class = JSONResponse
+    app.json_encoder = JSONEncoder
     with app.app_context():
         yield app
 
@@ -173,3 +190,8 @@ def resources(jsonapi, db, models):
         )
     )
     return jsonapi.resources
+
+
+@pytest.fixture
+def client(app, resources):
+    return app.test_client()

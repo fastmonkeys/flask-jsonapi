@@ -8,13 +8,13 @@ from .params import FieldsParameter, IncludeParameter
 
 class Serializer(object):
     def __init__(
-        self, resource_registry, type_, fields=None, include=None,
+        self, resource_registry, type_, fields, include,
         pagination=None
     ):
         self._resource_registry = resource_registry
         self._type = type_
-        self._fields = FieldsParameter(resource_registry, fields)
-        self._include = IncludeParameter(resource_registry, type_, include)
+        self._fields = fields
+        self._include = include
         self._pagination = pagination
 
     def dump(self, input_, many=False):
@@ -32,7 +32,7 @@ class Serializer(object):
     def _dump_top_level_links(self, input_, many):
         if many:
             links = {
-                "self": url_for('jsonapi.get_many', type=self._type)
+                "self": url_for('jsonapi.get_collection', type=self._type)
             }
             for name, link in self._iter_pagination_links():
                 links[name] = link
@@ -55,7 +55,7 @@ class Serializer(object):
                 else:
                     params = dict(qstring.unnest({'page': params}))
                     link = url_for(
-                        'jsonapi.get_many',
+                        'jsonapi.get_collection',
                         type=self._type,
                         **params
                     )

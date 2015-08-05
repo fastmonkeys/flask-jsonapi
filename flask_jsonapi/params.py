@@ -53,7 +53,7 @@ class FieldsParameter(object):
         try:
             field_items = fields.items()
         except AttributeError:
-            raise exc.InvalidFieldFormat()
+            raise exc.InvalidFieldsFormat()
         return {
             type: self._parse_requested_field_names(type, field_names)
             for type, field_names in field_items
