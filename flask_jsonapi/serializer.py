@@ -1,23 +1,65 @@
 import itertools
 
+import qstring
 from flask import url_for
+
+from .params import FieldsParameter, IncludeParameter
 
 
 class Serializer(object):
-    def __init__(self, resource_registry, params):
+    def __init__(
+        self, resource_registry, type_, fields=None, include=None,
+        pagination=None
+    ):
         self._resource_registry = resource_registry
-        self._params = params
+        self._type = type_
+        self._fields = FieldsParameter(resource_registry, fields)
+        self._include = IncludeParameter(resource_registry, type_, include)
+        self._pagination = pagination
 
     def dump(self, input_, many=False):
         self._included_resource_objects = set()
         data = self._dump_primary_data(input_, many)
         included = self._dump_included_data(input_, many)
         document = {
+            "links": self._dump_top_level_links(input_, many),
             "data": data
         }
         if included:
             document["included"] = included
         return document
+
+    def _dump_top_level_links(self, input_, many):
+        if many:
+            links = {
+                "self": url_for('jsonapi.get_many', type=self._type)
+            }
+            for name, link in self._iter_pagination_links():
+                links[name] = link
+        else:
+            resource = self._get_resource(input_)
+            links = {
+                "self": url_for(
+                    'jsonapi.get',
+                    type=resource.type,
+                    id=resource.repository.get_id(input_)
+                )
+            }
+        return links
+
+    def _iter_pagination_links(self):
+        if self._pagination:
+            for name, params in self._pagination.link_params.items():
+                if params is None:
+                    yield name, None
+                else:
+                    params = dict(qstring.unnest({'page': params}))
+                    link = url_for(
+                        'jsonapi.get_many',
+                        type=self._type,
+                        **params
+                    )
+                    yield name, link
 
     def _dump_primary_data(self, input_, many):
         if many:
@@ -28,7 +70,7 @@ class Serializer(object):
     def _dump_included_data(self, input_, many):
         input_ = input_ if many else [input_]
         models = itertools.chain.from_iterable(
-            self._iter_included_models(model, self._params.include.tree)
+            self._iter_included_models(model, self._include.tree)
             for model in input_
         )
         return [
@@ -69,17 +111,14 @@ class Serializer(object):
         return self._resource_registry.by_model_class[model.__class__]
 
     def _dump_attributes_object(self, resource, model):
-        attributes = self._params.fields[resource.type] & resource.attributes
+        attributes = self._fields[resource.type] & resource.attributes
         return {
             attr: resource.repository.get_attribute(model, attr)
             for attr in attributes
         }
 
     def _dump_relationships_object(self, resource, model):
-        relationships = (
-            self._params.fields[resource.type] &
-            resource.relationships
-        )
+        relationships = self._fields[resource.type] & resource.relationships
         return {
             relationship: self._dump_relationship_object(model, relationship)
             for relationship in relationships

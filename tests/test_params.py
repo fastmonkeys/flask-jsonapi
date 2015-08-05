@@ -1,38 +1,7 @@
 import pytest
 
 from flask_jsonapi import exc
-from flask_jsonapi.params import (
-    FieldsParameter,
-    IncludeParameter,
-    RequestParameters
-)
-
-
-class TestRequestParameters(object):
-    @pytest.fixture
-    def params(self, resources):
-        return RequestParameters(
-            resources,
-            type='stores',
-            args={
-                'fields': {
-                    'books': 'title'
-                },
-                'include': 'books',
-            }
-        )
-
-    def test_fields(self, params):
-        assert params.fields['books'] == {'title'}
-
-    def test_include(self, params):
-        assert params.include.tree == {'books': {}}
-
-    def test___repr__(self, params):
-        assert repr(params) == (
-            '<RequestParameters fields={params.fields!r}, '
-            'include={params.include!r}>'
-        ).format(params=params)
+from flask_jsonapi.params import FieldsParameter, IncludeParameter
 
 
 class TestFieldsParameter(object):

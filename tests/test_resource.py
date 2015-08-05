@@ -1,8 +1,8 @@
 import pytest
 
 from flask_jsonapi import exc
-from flask_jsonapi.resource import Resource
 from flask_jsonapi.repository import SQLAlchemyRepository
+from flask_jsonapi.resource import Resource
 
 
 @pytest.mark.parametrize('attr', ['id', 'type'])

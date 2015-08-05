@@ -1,24 +1,40 @@
 import sqlalchemy
+from sqlalchemy import orm
+
+from . import exc
 
 
 class SQLAlchemyRepository(object):
     def __init__(self, session):
         self.session = session
 
-    def query(self, model_cls):
-        return self.session.query(model_cls)
+    def query(self, model_class):
+        return self.session.query(model_class)
 
-    def find(self, model_cls):
-        return self.query(model_cls)
+    def _include_related(self, query, include):
+        for path in include.paths:
+            option = orm.subqueryload(path[0])
+            for relation in path[1:]:
+                option = option.subqueryload(relation)
+            query = query.options(option)
+        return query
 
-    def find_by_id(self, model_cls, id):
+    def find(self, model_class, include):
+        return self.query(model_class, include=include)
+
+    def find_count(self, model_class):
+        return self.query(model_class).count()
+
+    def find_by_id(self, model_class, id, include):
+        query = self.query(model_class).filter_by(id=id)
+        query = self._include_related(query, include)
         try:
-            return self.query(model_cls).filter_by(id=id).one()
+            return query.one()
         except orm.exc.NoResultFound:
-            raise ResourceNotFound(id)
+            raise exc.ResourceNotFound(id)
 
-    def create(self, model_cls):
-        model = self.model_cls()
+    def create(self, model_class):
+        model = self.model_class()
         self.session.add(model)
         return model
 

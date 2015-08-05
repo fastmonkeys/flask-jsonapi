@@ -1,39 +1,27 @@
 from . import exc
 
 
-class RequestParameters(object):
-    def __init__(self, resources, type, args):
-        self.fields = FieldsParameter(resources, args.get('fields'))
-        self.include = IncludeParameter(resources, type, args.get('include'))
-
-    def __repr__(self):
-        return (
-            '<RequestParameters '
-            'fields={self.fields!r}, '
-            'include={self.include!r}>'
-        ).format(self=self)
-
-
 class IncludeParameter(object):
     def __init__(self, resources, type, include):
         self._resources = resources
         self._type = type
         self.raw = include
+        self.paths = self._parse_paths()
         self.tree = {}
         self._build_tree()
 
     def _build_tree(self):
-        for path in self._iter_relationship_paths():
+        for path in self.paths:
             self._add_relationship_path_to_tree(path)
 
-    def _iter_relationship_paths(self):
-        if self.raw:
-            try:
-                paths = self.raw.split(',')
-            except AttributeError:
-                raise exc.InvalidIncludeValue(self.raw)
-            for path in paths:
-                yield path.split('.')
+    def _parse_paths(self):
+        if not self.raw:
+            return []
+        try:
+            paths = self.raw.split(',')
+        except AttributeError:
+            raise exc.InvalidIncludeValue(self.raw)
+        return [p.split('.') for p in paths]
 
     def _add_relationship_path_to_tree(self, path):
         current_node = self.tree

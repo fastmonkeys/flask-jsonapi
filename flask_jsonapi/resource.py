@@ -1,16 +1,18 @@
 from . import exc
+from .paginator import PagedPaginator
 
 
 class Resource(object):
     def __init__(
         self, type, model_class, repository, attributes=None,
-        relationships=None
+        relationships=None, paginator=None
     ):
         self.type = type
         self.model_class = model_class
         self.repository = repository
         self.attributes = frozenset(attributes or [])
         self.relationships = frozenset(relationships or [])
+        self.paginator = paginator if paginator else PagedPaginator()
         self._validate_field_names()
 
     def _validate_field_names(self):

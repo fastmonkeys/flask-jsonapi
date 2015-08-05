@@ -1,4 +1,4 @@
-from flask import Blueprint, current_app, jsonify
+from flask import Blueprint
 
 blueprint = Blueprint('jsonapi', __name__)
 
@@ -11,11 +11,7 @@ def set_response_content_type(response):
 
 @blueprint.route('/<type>', methods=['GET'])
 def get_many(type):
-    resource = current_app.extensions['jsonapi']._resources_by_type[type]
-    objects = resource.model.query.all()
-    schema = resource.schema()
-    document = Document(schema)
-    return jsonify(document.dump(objects))
+    pass
 
 
 @blueprint.route('/<type>/<id>', methods=['GET'])
@@ -43,7 +39,10 @@ def update(type, id):
     pass
 
 
-@blueprint.route('/<type>/<id>/relationships/<relationship>', methods=['PATCH'])
+@blueprint.route(
+    '/<type>/<id>/relationships/<relationship>',
+    methods=['PATCH']
+)
 def update_relationship(type, id):
     pass
 
@@ -53,6 +52,9 @@ def add_to_relationship(type, id):
     pass
 
 
-@blueprint.route('/<type>/<id>/relationships/<relationship>', methods=['DELETE'])
+@blueprint.route(
+    '/<type>/<id>/relationships/<relationship>',
+    methods=['DELETE']
+)
 def delete_from_relationship(type, id):
     pass

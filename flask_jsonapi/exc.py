@@ -46,3 +46,17 @@ class InvalidInclude(JSONAPIException):
 class InvalidIncludeValue(JSONAPIException):
     def __init__(self, value):
         self.value = value
+
+
+class ResourceNotFound(JSONAPIException):
+    def __init__(self, id):
+        self.id = id
+
+
+class PageParametersNotAllowed(JSONAPIException):
+    def __init__(self, params):
+        self.params = params
+
+
+class InvalidPageValue(JSONAPIException):
+    pass
