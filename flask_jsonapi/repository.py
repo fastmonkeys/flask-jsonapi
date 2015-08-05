@@ -11,27 +11,36 @@ class SQLAlchemyRepository(object):
     def query(self, model_class):
         return self.session.query(model_class)
 
-    def _include_related(self, query, include):
-        for path in include.paths:
-            option = orm.subqueryload(path[0])
-            for relation in path[1:]:
-                option = option.subqueryload(relation)
-            query = query.options(option)
-        return query
+    def find(self, model_class, include=None, pagination=None):
+        query = self.query(model_class)
+        query = self._include_related(query, include)
+        query = self._paginate(query, pagination)
+        return query.all()
 
-    def find(self, model_class, include):
-        return self.query(model_class, include=include)
-
-    def find_count(self, model_class):
-        return self.query(model_class).count()
-
-    def find_by_id(self, model_class, id, include):
+    def find_by_id(self, model_class, id, include=None):
         query = self.query(model_class).filter_by(id=id)
         query = self._include_related(query, include)
         try:
             return query.one()
         except orm.exc.NoResultFound:
             raise exc.ResourceNotFound(id)
+
+    def find_count(self, model_class):
+        return self.query(model_class).count()
+
+    def _include_related(self, query, include):
+        paths = [] if include is None else include.paths
+        for path in paths:
+            option = orm.subqueryload(path[0])
+            for relation in path[1:]:
+                option = option.subqueryload(relation)
+            query = query.options(option)
+        return query
+
+    def _paginate(self, query, pagination):
+        if pagination is not None:
+            query = query.offset(pagination.offset).limit(pagination.limit)
+        return query
 
     def create(self, model_class):
         model = self.model_class()
