@@ -4,55 +4,47 @@ from . import exc
 
 
 class Pagination(object):
-    @property
-    def link_params(self):
+    def get_link_params(self, count):
         return {
-            'first': self.first,
-            'last': self.last,
-            'prev': self.prev if self.has_prev else None,
-            'next': self.next if self.has_next else None,
+            'first': self.get_first(),
+            'last': self.get_last(count),
+            'prev': self.get_prev() if self.has_prev() else None,
+            'next': self.get_next() if self.has_next(count) else None,
         }
 
 
 class OffsetPagination(Pagination):
-    def __init__(self, offset, limit, count):
+    def __init__(self, offset, limit):
         self.offset = offset
         self.limit = limit
-        self.count = count
 
-    @property
-    def first(self):
+    def get_first(self):
         return {
             'offset': 0,
             'limit': self.limit
         }
 
-    @property
     def has_prev(self):
         return self.offset > 0
 
-    @property
-    def prev(self):
+    def get_prev(self):
         return {
             'offset': max(self.offset - self.limit, 0),
             'limit': self.limit
         }
 
-    @property
-    def has_next(self):
-        return self.offset + self.limit < self.count
+    def has_next(self, count):
+        return self.offset + self.limit < count
 
-    @property
-    def next(self):
+    def get_next(self):
         return {
             'offset': self.offset + self.limit,
             'limit': self.limit
         }
 
-    @property
-    def last(self):
+    def get_last(self, count):
         return {
-            'offset': self.count - self.offset,
+            'offset': count - self.limit,
             'limit': self.limit
         }
 
@@ -64,46 +56,9 @@ class OffsetPagination(Pagination):
 
 
 class PagedPagination(Pagination):
-    def __init__(self, number, size, count):
+    def __init__(self, number, size):
         self.number = number
         self.size = size
-        self.count = count
-
-    @property
-    def first(self):
-        return {
-            'number': 1,
-            'size': self.size
-        }
-
-    @property
-    def has_prev(self):
-        return self.number > 1
-
-    @property
-    def prev(self):
-        return {
-            'number': self.number - 1,
-            'size': self.size
-        }
-
-    @property
-    def has_next(self):
-        return self.number < self.pages
-
-    @property
-    def next(self):
-        return {
-            'number': self.number + 1,
-            'size': self.size
-        }
-
-    @property
-    def last(self):
-        return {
-            'number': self.pages,
-            'size': self.size
-        }
 
     @property
     def offset(self):
@@ -113,9 +68,38 @@ class PagedPagination(Pagination):
     def limit(self):
         return self.size
 
-    @property
-    def pages(self):
-        return int(math.ceil(self.count / float(self.size)))
+    def get_first(self):
+        return {
+            'number': 1,
+            'size': self.size
+        }
+
+    def has_prev(self):
+        return self.number > 1
+
+    def get_prev(self):
+        return {
+            'number': self.number - 1,
+            'size': self.size
+        }
+
+    def has_next(self, count):
+        return self.number < self.get_pages(count)
+
+    def get_next(self):
+        return {
+            'number': self.number + 1,
+            'size': self.size
+        }
+
+    def get_last(self, count):
+        return {
+            'number': self.get_pages(count),
+            'size': self.size
+        }
+
+    def get_pages(self, count):
+        return int(math.ceil(count / float(self.size)))
 
     def __repr__(self):
         return '<PagedPagination number={number} size={size}>'.format(
@@ -129,10 +113,10 @@ class Paginator(object):
         self.max_page_size = max_page_size
         self.default_page_size = default_page_size
 
-    def paginate(self, params, count):
+    def paginate(self, params):
         self._check_extra_params(params)
         params = self._validate(params)
-        return self.pagination_class(count=count, **params)
+        return self.pagination_class(**params)
 
     def _check_extra_params(self, params):
         try:
