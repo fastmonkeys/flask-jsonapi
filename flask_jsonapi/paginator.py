@@ -141,7 +141,7 @@ class Paginator(object):
             raise exc.InvalidPageValue(None, 'invalid value for page parameter')
         extra_params = set(keys) - self.allowed_params
         if extra_params:
-            raise exc.PageParametersNotAllowed(extra_params)
+            raise exc.InvalidPageParameters(extra_params)
 
     def _validate(self, params):
         return params

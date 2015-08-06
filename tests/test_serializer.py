@@ -245,7 +245,7 @@ def test_resource_collection_with_pagination(jsonapi, resources, books, db):
     serializer = Serializer(
         jsonapi.resources,
         'books',
-        pagination=PagedPagination(number=1, size=20, total=157)
+        pagination=PagedPagination(number=1, size=20, count=157)
     )
     data = serializer.dump(books, many=True)
     assert data['links'] == {
