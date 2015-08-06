@@ -138,7 +138,7 @@ class Paginator(object):
         try:
             keys = params.keys()
         except AttributeError:
-            raise exc.InvalidPageValue(None, 'invalid value for page parameter')
+            raise exc.InvalidPageFormat()
         extra_params = set(keys) - self.allowed_params
         if extra_params:
             raise exc.InvalidPageParameters(extra_params)

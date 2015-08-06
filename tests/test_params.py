@@ -25,11 +25,11 @@ class TestFieldsParameter(object):
         assert fields['stores'] == {'name', 'books'}
 
     def test_invalid_fields_parameter(self, resources):
-        with pytest.raises(exc.InvalidFieldFormat):
+        with pytest.raises(exc.FieldTypeMissing):
             FieldsParameter(resources, fields='invalid')
 
-    def test_invalid_resource(self, resources):
-        with pytest.raises(exc.InvalidResource) as exc_info:
+    def test_invalid_field_type(self, resources):
+        with pytest.raises(exc.InvalidFieldType) as exc_info:
             FieldsParameter(resources, fields={'invalid': ''})
         assert exc_info.value.type == 'invalid'
 
@@ -39,11 +39,10 @@ class TestFieldsParameter(object):
         assert exc_info.value.type == 'series'
         assert exc_info.value.field == 'invalid'
 
-    def test_invalid_field_value(self, resources):
-        with pytest.raises(exc.InvalidFieldValue) as exc_info:
+    def test_invalid_field_format(self, resources):
+        with pytest.raises(exc.InvalidFieldFormat) as exc_info:
             FieldsParameter(resources, fields={'series': ['foo', 'bar']})
         assert exc_info.value.type == 'series'
-        assert exc_info.value.value == ['foo', 'bar']
 
     def test_restricts_fields_to_be_returned(self, resources):
         fields = FieldsParameter(resources, fields={
@@ -77,10 +76,9 @@ class TestIncludeParameter(object):
         assert exc_info.value.type == 'books'
         assert exc_info.value.relationship == 'invalid'
 
-    def test_invalid_value(self, resources):
-        with pytest.raises(exc.InvalidIncludeValue) as exc_info:
+    def test_invalid_format(self, resources):
+        with pytest.raises(exc.InvalidIncludeFormat):
             IncludeParameter(resources, 'stores', {'foo': 'bar'})
-        assert exc_info.value.value == {'foo': 'bar'}
 
     def test___repr__(self, resources):
         include = IncludeParameter(

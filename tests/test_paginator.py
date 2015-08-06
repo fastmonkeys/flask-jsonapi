@@ -142,7 +142,7 @@ class TestPagedPagination(object):
 class TestOffsetPaginator(object):
     def test_extra_parameters_raises_error(self):
         paginator = OffsetPaginator()
-        with pytest.raises(exc.PageParametersNotAllowed) as exc_info:
+        with pytest.raises(exc.InvalidPageParameters) as exc_info:
             paginator.paginate({'foo': 'bar'}, count=10)
         assert exc_info.value.params == {'foo'}
 
@@ -191,15 +191,14 @@ class TestOffsetPaginator(object):
 
     def test_invalid_params(self):
         paginator = OffsetPaginator()
-        with pytest.raises(exc.InvalidPageValue) as exc_info:
+        with pytest.raises(exc.InvalidPageFormat):
             paginator.paginate('foobar', count=10)
-        assert exc_info.value.message == 'invalid value for page parameter'
 
 
 class TestPagedPaginator(object):
     def test_extra_parameters_raises_error(self):
         paginator = PagedPaginator()
-        with pytest.raises(exc.PageParametersNotAllowed) as exc_info:
+        with pytest.raises(exc.InvalidPageParameters) as exc_info:
             paginator.paginate({'foo': 'bar'}, count=10)
         assert exc_info.value.params == {'foo'}
 
@@ -243,6 +242,5 @@ class TestPagedPaginator(object):
 
     def test_invalid_params(self):
         paginator = PagedPaginator()
-        with pytest.raises(exc.InvalidPageValue) as exc_info:
+        with pytest.raises(exc.InvalidPageFormat):
             paginator.paginate('foobar', count=10)
-        assert exc_info.value.message == 'invalid value for page parameter'

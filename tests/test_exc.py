@@ -95,7 +95,6 @@ class TestInvalidField(object):
         ]
 
 
-
 class TestInvalidIncludeFormat(object):
     def test_errors(self):
         e = exc.InvalidIncludeFormat()

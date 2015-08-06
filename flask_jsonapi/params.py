@@ -20,7 +20,7 @@ class IncludeParameter(object):
         try:
             paths = self.raw.split(',')
         except AttributeError:
-            raise exc.InvalidIncludeValue(self.raw)
+            raise exc.InvalidIncludeFormat()
         return [p.split('.') for p in paths]
 
     def _add_relationship_path_to_tree(self, path):
@@ -53,7 +53,7 @@ class FieldsParameter(object):
         try:
             field_items = fields.items()
         except AttributeError:
-            raise exc.InvalidFieldsFormat()
+            raise exc.FieldTypeMissing()
         return {
             type: self._parse_requested_field_names(type, field_names)
             for type, field_names in field_items
@@ -69,13 +69,13 @@ class FieldsParameter(object):
         try:
             return self._resources.by_type[type]
         except KeyError:
-            raise exc.InvalidResource(type)
+            raise exc.InvalidFieldType(type)
 
     def _split_field_names(self, resource, field_names):
         try:
             return field_names.split(',')
         except AttributeError:
-            raise exc.InvalidFieldValue(resource.type, field_names)
+            raise exc.InvalidFieldFormat(resource.type)
 
     def _validate_field_names(self, resource, field_names):
         for field_name in field_names:
