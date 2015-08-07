@@ -30,6 +30,7 @@ setup(
     install_requires=[
         'Flask',
         'Flask-SQLAlchemy',
+        'SQLAlchemy>=1.0',
         'qstring',
     ],
     extras_require={

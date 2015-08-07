@@ -115,7 +115,7 @@ def models(db):
         )
         author = db.relationship(Author, backref='books')
         series_id = db.Column(db.Integer, db.ForeignKey(Series.id))
-        series = db.relationship(Series)
+        series = db.relationship(Series, backref='books')
         date_published = db.Column(db.Date, nullable=False)
         title = db.Column(db.Text)
 

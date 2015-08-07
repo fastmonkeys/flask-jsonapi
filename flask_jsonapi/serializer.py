@@ -3,19 +3,12 @@ import itertools
 import qstring
 from flask import url_for
 
-from .params import FieldsParameter, IncludeParameter
-
 
 class Serializer(object):
-    def __init__(
-        self, resource_registry, type_, fields, include,
-        pagination=None
-    ):
+    def __init__(self, resource_registry, type, params):
         self._resource_registry = resource_registry
-        self._type = type_
-        self._fields = fields
-        self._include = include
-        self._pagination = pagination
+        self._type = type
+        self._params = params
 
     def dump(self, input_, many=False):
         self._included_resource_objects = set()

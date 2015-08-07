@@ -8,15 +8,15 @@ class SQLAlchemyRepository(object):
     def __init__(self, session):
         self.session = session
 
-    def find(self, model_class, include=None, pagination=None):
+    def find(self, model_class, params):
         query = self.query(model_class)
-        query = self._include_related(query, include)
-        query = self._paginate(query, pagination)
+        query = self._include_related(query, params.include)
+        query = self._paginate(query, params.pagination)
         return query.all()
 
-    def find_by_id(self, model_class, id, include=None):
+    def find_by_id(self, model_class, id, params):
         query = self.query(model_class).filter_by(id=id)
-        query = self._include_related(query, include)
+        query = self._include_related(query, params.include)
         try:
             return query.one()
         except orm.exc.NoResultFound:
@@ -66,13 +66,34 @@ class SQLAlchemyRepository(object):
     def remove_has_many_relationship(self, model, name, value):
         getattr(model, name).remove(value)
 
-    def get_related(self, model, relationship):
-        return getattr(model, relationship)
+    def find_related_model(self, model, relationship, params=None):
+        query = self._query_related(model, relationship)
+        query = self._include_related(query, params.include)
+        return query.first()
+
+    def find_related_collection(self, model, relationship, params=None):
+        query = self._query_related(model, relationship)
+        query = self._include_related(query, params.include)
+        query = self._paginate(query, params.pagination)
+        return query.all()
+
+    def _query_related(self, model, relationship):
+        related_model_class = self.get_related_model_class(
+            model.__class__,
+            relationship
+        )
+        relationship_property = self._get_relationship_property(
+            model.__class__,
+            relationship
+        )
+        query = self.session.query(related_model_class)
+        query._criterion = relationship_property._with_parent(model)
+        query._order_by = relationship_property.order_by
+        return query
 
     def get_related_model_class(self, model_class, relationship):
-        mapper = sqlalchemy.inspect(model_class)
-        relationship_property = mapper.relationships[relationship]
-        return relationship_property.mapper.class_
+        prop = self._get_relationship_property(model_class, relationship)
+        return prop.mapper.class_
 
     def get_attribute(self, model, attribute):
         return getattr(model, attribute)
@@ -82,5 +103,17 @@ class SQLAlchemyRepository(object):
 
     def is_to_many_relationship(self, model_class, relationship):
         mapper = sqlalchemy.inspect(model_class)
-        relationship_property = mapper.relationships[relationship]
-        return relationship_property.uselist
+        return mapper.relationships[relationship].uselist
+
+    def validate_attribute(self, model_class, attribute):
+        pass
+
+    def validate_relationship(self, model_class, relationship):
+        self._get_relationship_property(model_class, relationship)
+
+    def _get_relationship_property(self, model_class, relationship):
+        mapper = sqlalchemy.inspect(model_class)
+        try:
+            return mapper.relationships[relationship]
+        except KeyError:
+            raise exc.InvalidRelationship(model_class, relationship)

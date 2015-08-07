@@ -15,6 +15,21 @@ class FieldNamingConflict(JSONAPIError):
     pass
 
 
+class InvalidRelationship(JSONAPIError):
+    def __init__(self, model_class, relationship):
+        self.model_class = model_class
+        self.relationship = relationship
+
+    def __str__(self):
+        return (
+            '{relationship} is not a valid relationship for '
+            '{model_class}.'
+        ).format(
+            relationship=self.relationship,
+            model_class=self.model_class.__name__
+        )
+
+
 class RequestError(JSONAPIError):
     @property
     def errors(self):
