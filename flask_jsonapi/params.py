@@ -1,30 +1,25 @@
-from . import exc
+from . import errors
 
 
 class Parameters(object):
-    def __init__(
-        self, resource_registry, type, params, allow_fields=False,
-        allow_include=False, allow_pagination=False
-    ):
+    def __init__(self, resource_registry, type, params):
         resource = resource_registry.by_type[type]
 
         self.fields = FieldsParameter(
             resource_registry,
             params.pop('fields', None)
-        ) if allow_fields else None
-
+        )
         self.include = IncludeParameter(
             resource_registry,
             type,
             params.pop('include', None)
-        ) if allow_include else None
-
+        )
         self.pagination = resource.paginator.paginate(
             params.pop('page', {})
-        ) if allow_pagination else None
+        )
 
         if params:
-            raise exc.ParametersNotAllowed(params.keys())
+            raise errors.ParametersNotAllowed(params.keys())
 
 
 class FieldsParameter(object):
@@ -38,7 +33,7 @@ class FieldsParameter(object):
         try:
             field_items = fields.items()
         except AttributeError:
-            raise exc.FieldTypeMissing()
+            raise errors.FieldTypeMissing()
         return {
             type: self._parse_requested_field_names(type, field_names)
             for type, field_names in field_items
@@ -54,18 +49,18 @@ class FieldsParameter(object):
         try:
             return self._resource_registry.by_type[type]
         except KeyError:
-            raise exc.InvalidFieldType(type)
+            raise errors.InvalidFieldType(type)
 
     def _split_field_names(self, resource, field_names):
         try:
             return field_names.split(',')
         except AttributeError:
-            raise exc.InvalidFieldFormat(resource.type)
+            raise errors.InvalidFieldFormat(resource.type)
 
     def _validate_field_names(self, resource, field_names):
         for field_name in field_names:
             if field_name not in resource.fields:
-                raise exc.InvalidField(resource.type, field_name)
+                raise errors.InvalidField(resource.type, field_name)
 
     def __getitem__(self, type):
         try:
@@ -96,7 +91,7 @@ class IncludeParameter(object):
         try:
             paths = self.raw.split(',')
         except AttributeError:
-            raise exc.InvalidIncludeFormat()
+            raise errors.InvalidIncludeFormat()
         return [p.split('.') for p in paths]
 
     def _add_relationship_path_to_tree(self, path):
@@ -106,8 +101,8 @@ class IncludeParameter(object):
             if name not in current_node:
                 current_node[name] = {}
             if name not in resource.relationships:
-                raise exc.InvalidInclude(resource.type, name)
-            related_model_class = resource.repository.get_related_model_class(
+                raise errors.InvalidInclude(resource.type, name)
+            related_model_class = resource.store.get_related_model_class(
                 model_class=resource.model_class,
                 relationship=name
             )

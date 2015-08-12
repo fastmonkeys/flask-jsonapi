@@ -1,4 +1,4 @@
-from . import exc
+from . import exceptions
 
 
 class ResourceRegistry(object):
@@ -8,13 +8,13 @@ class ResourceRegistry(object):
 
     def register(self, resource):
         if resource.type in self.by_type:
-            raise exc.ResourceAlreadyRegistered(
+            raise exceptions.ResourceAlreadyRegistered(
                 'A resource with type {type!r} has already been '
                 'registered.'.format(type=resource.type)
             )
 
         if resource.model_class in self.by_model_class:
-            raise exc.ResourceAlreadyRegistered(
+            raise exceptions.ResourceAlreadyRegistered(
                 'A resource with model class {model_class!r} has already been '
                 'registered.'.format(model_class=resource.model_class)
             )

@@ -1,7 +1,8 @@
 __version__ = '0.1.0 '
 
-from .views import blueprint
+from .controller import Controller
 from .resource_registry import ResourceRegistry
+from .views import blueprint
 
 
 class JSONAPI(object):
@@ -9,6 +10,7 @@ class JSONAPI(object):
         self.app = app
         self.resources = ResourceRegistry()
         self.url_prefix = url_prefix
+        self.controller = Controller(self.resources)
         if app is not None:
             self.init_app(app)
 

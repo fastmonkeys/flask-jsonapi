@@ -1,9 +1,9 @@
-from flask_jsonapi import exc
+from flask_jsonapi import errors
 
 
 class TestInvalidResource(object):
     def test_errors(self):
-        e = exc.InvalidResource('foobars')
+        e = errors.InvalidResource('foobars')
         assert e.errors == [
             {
                 "code": 'INVALID_RESOURCE',
@@ -16,7 +16,7 @@ class TestInvalidResource(object):
 
 class TestResourceNotFound(object):
     def test_errors(self):
-        e = exc.ResourceNotFound('123')
+        e = errors.ResourceNotFound('123')
         assert e.errors == [
             {
                 "code": 'RESOURCE_NOT_FOUND',
@@ -29,7 +29,7 @@ class TestResourceNotFound(object):
 
 class TestFieldTypeMissing(object):
     def test_errors(self):
-        e = exc.FieldTypeMissing()
+        e = errors.FieldTypeMissing()
         assert e.errors == [
             {
                 "code": "FIELD_TYPE_MISSING",
@@ -45,7 +45,7 @@ class TestFieldTypeMissing(object):
 
 class TestInvalidFieldFormat(object):
     def test_errors(self):
-        e = exc.InvalidFieldFormat('books')
+        e = errors.InvalidFieldFormat('books')
         assert e.errors == [
             {
                 "code": "INVALID_FIELD_FORMAT",
@@ -65,7 +65,7 @@ class TestInvalidFieldFormat(object):
 
 class TestInvalidFieldType(object):
     def test_errors(self):
-        e = exc.InvalidFieldType('foobars')
+        e = errors.InvalidFieldType('foobars')
         assert e.errors == [
             {
                 "code": "INVALID_FIELD_TYPE",
@@ -81,7 +81,7 @@ class TestInvalidFieldType(object):
 
 class TestInvalidField(object):
     def test_errors(self):
-        e = exc.InvalidField('books', 'foobar')
+        e = errors.InvalidField('books', 'foobar')
         assert e.errors == [
             {
                 "code": "INVALID_FIELD",
@@ -97,7 +97,7 @@ class TestInvalidField(object):
 
 class TestInvalidIncludeFormat(object):
     def test_errors(self):
-        e = exc.InvalidIncludeFormat()
+        e = errors.InvalidIncludeFormat()
         assert e.errors == [
             {
                 "code": "INVALID_INCLUDE_FORMAT",
@@ -116,7 +116,7 @@ class TestInvalidIncludeFormat(object):
 
 class TestInvalidInclude(object):
     def test_errors(self):
-        e = exc.InvalidInclude('books', 'foobar')
+        e = errors.InvalidInclude('books', 'foobar')
         assert e.errors == [
             {
                 "code": "INVALID_INCLUDE",
@@ -132,7 +132,7 @@ class TestInvalidInclude(object):
 
 class TestInvalidSortFormat(object):
     def test_errors(self):
-        e = exc.InvalidSortFormat()
+        e = errors.InvalidSortFormat()
         assert e.errors == [
             {
                 "code": "INVALID_SORT_FORMAT",
@@ -151,7 +151,7 @@ class TestInvalidSortFormat(object):
 
 class TestInvalidSortField(object):
     def test_errors(self):
-        e = exc.InvalidSortField('books', 'foobar')
+        e = errors.InvalidSortField('books', 'foobar')
         assert e.errors == [
             {
                 "code": "INVALID_SORT_FIELD",
@@ -167,7 +167,7 @@ class TestInvalidSortField(object):
 
 class TestInvalidPageFormat(object):
     def test_errors(self):
-        e = exc.InvalidPageFormat()
+        e = errors.InvalidPageFormat()
         assert e.errors == [
             {
                 "status": 400,
@@ -182,7 +182,7 @@ class TestInvalidPageFormat(object):
 
 class TestInvalidPageParameters(object):
     def test_errors(self):
-        e = exc.InvalidPageParameters({'foo', 'bar'})
+        e = errors.InvalidPageParameters({'foo', 'bar'})
         assert e.errors == [
             {
                 "status": 400,
@@ -207,7 +207,7 @@ class TestInvalidPageParameters(object):
 
 class TestInvalidPageValue(object):
     def test_errors(self):
-        e = exc.InvalidPageValue('offset', 'offset must be at least 0')
+        e = errors.InvalidPageValue('offset', 'offset must be at least 0')
         assert e.errors == [
             {
                 "status": 400,

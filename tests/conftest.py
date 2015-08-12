@@ -11,8 +11,8 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.http import http_date
 
 from flask_jsonapi import JSONAPI
-from flask_jsonapi.repository import SQLAlchemyRepository
 from flask_jsonapi.resource import Resource
+from flask_jsonapi.store.sqlalchemy import SQLAlchemyStore
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 FANTASY_DATABASE_FILENAME = os.path.join(
@@ -149,7 +149,7 @@ def resources(jsonapi, db, models):
         Resource(
             type='series',
             model_class=models.Series,
-            repository=SQLAlchemyRepository(db.session),
+            store=SQLAlchemyStore(db.session),
             attributes=('title',)
         )
     )
@@ -157,7 +157,7 @@ def resources(jsonapi, db, models):
         Resource(
             type='authors',
             model_class=models.Author,
-            repository=SQLAlchemyRepository(db.session),
+            store=SQLAlchemyStore(db.session),
             attributes=('name', 'date_of_birth', 'date_of_death'),
             relationships=('books',)
         )
@@ -166,7 +166,7 @@ def resources(jsonapi, db, models):
         Resource(
             type='books',
             model_class=models.Book,
-            repository=SQLAlchemyRepository(db.session),
+            store=SQLAlchemyStore(db.session),
             attributes=('date_published', 'title'),
             relationships=('author', 'chapters', 'series')
         )
@@ -175,7 +175,7 @@ def resources(jsonapi, db, models):
         Resource(
             type='chapters',
             model_class=models.Chapter,
-            repository=SQLAlchemyRepository(db.session),
+            store=SQLAlchemyStore(db.session),
             attributes=('title', 'ordering'),
             relationships=('book',)
         )
@@ -184,7 +184,7 @@ def resources(jsonapi, db, models):
         Resource(
             type='stores',
             model_class=models.Store,
-            repository=SQLAlchemyRepository(db.session),
+            store=SQLAlchemyStore(db.session),
             attributes=('name',),
             relationships=('books',)
         )

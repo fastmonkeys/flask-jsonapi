@@ -1,6 +1,6 @@
 import math
 
-from . import exc
+from . import errors
 
 
 class Pagination(object):
@@ -122,10 +122,10 @@ class Paginator(object):
         try:
             keys = params.keys()
         except AttributeError:
-            raise exc.InvalidPageFormat()
+            raise errors.InvalidPageFormat()
         extra_params = set(keys) - self.allowed_params
         if extra_params:
-            raise exc.InvalidPageParameters(extra_params)
+            raise errors.InvalidPageParameters(extra_params)
 
     def _validate(self, params):
         return params
@@ -139,18 +139,18 @@ class OffsetPaginator(Paginator):
         try:
             params['offset'] = int(params.get('offset', 0))
         except ValueError:
-            raise exc.InvalidPageValue('offset', 'offset must be an integer')
+            raise errors.InvalidPageValue('offset', 'offset must be an integer')
 
         try:
             params['limit'] = int(params.get('limit', self.default_page_size))
         except ValueError:
-            raise exc.InvalidPageValue('limit', 'limit must be an integer')
+            raise errors.InvalidPageValue('limit', 'limit must be an integer')
 
         if params['limit'] < 1:
-            raise exc.InvalidPageValue('limit', 'limit must be at least 1')
+            raise errors.InvalidPageValue('limit', 'limit must be at least 1')
 
         if params['limit'] > self.max_page_size:
-            raise exc.InvalidPageValue(
+            raise errors.InvalidPageValue(
                 'limit',
                 'limit cannot exceed maximum page size of {}'.format(
                     self.max_page_size
@@ -158,7 +158,7 @@ class OffsetPaginator(Paginator):
             )
 
         if params['offset'] < 0:
-            raise exc.InvalidPageValue('offset', 'offset must be at least 0')
+            raise errors.InvalidPageValue('offset', 'offset must be at least 0')
 
         return params
 
@@ -171,18 +171,18 @@ class PagedPaginator(Paginator):
         try:
             params['number'] = int(params.get('number', 1))
         except ValueError:
-            raise exc.InvalidPageValue('number', 'number must be an integer')
+            raise errors.InvalidPageValue('number', 'number must be an integer')
 
         try:
             params['size'] = int(params.get('size', self.default_page_size))
         except ValueError:
-            raise exc.InvalidPageValue('size', 'size must be an integer')
+            raise errors.InvalidPageValue('size', 'size must be an integer')
 
         if params['size'] < 1:
-            raise exc.InvalidPageValue('size', 'size must be at least 1')
+            raise errors.InvalidPageValue('size', 'size must be at least 1')
 
         if params['size'] > self.max_page_size:
-            raise exc.InvalidPageValue(
+            raise errors.InvalidPageValue(
                 'size',
                 'size cannot exceed maximum page size of {}'.format(
                     self.max_page_size
@@ -190,6 +190,6 @@ class PagedPaginator(Paginator):
             )
 
         if params['number'] < 1:
-            raise exc.InvalidPageValue('number', 'number must be at least 1')
+            raise errors.InvalidPageValue('number', 'number must be at least 1')
 
         return params

@@ -1,6 +1,6 @@
 import pytest
 
-from flask_jsonapi import exc
+from flask_jsonapi import errors
 from flask_jsonapi.params import FieldsParameter, IncludeParameter
 
 
@@ -25,22 +25,22 @@ class TestFieldsParameter(object):
         assert fields['stores'] == {'name', 'books'}
 
     def test_invalid_fields_parameter(self, resources):
-        with pytest.raises(exc.FieldTypeMissing):
+        with pytest.raises(errors.FieldTypeMissing):
             FieldsParameter(resources, fields='invalid')
 
     def test_invalid_field_type(self, resources):
-        with pytest.raises(exc.InvalidFieldType) as exc_info:
+        with pytest.raises(errors.InvalidFieldType) as exc_info:
             FieldsParameter(resources, fields={'invalid': ''})
         assert exc_info.value.type == 'invalid'
 
     def test_invalid_field(self, resources):
-        with pytest.raises(exc.InvalidField) as exc_info:
+        with pytest.raises(errors.InvalidField) as exc_info:
             FieldsParameter(resources, fields={'series': 'invalid'})
         assert exc_info.value.type == 'series'
         assert exc_info.value.field == 'invalid'
 
     def test_invalid_field_format(self, resources):
-        with pytest.raises(exc.InvalidFieldFormat) as exc_info:
+        with pytest.raises(errors.InvalidFieldFormat) as exc_info:
             FieldsParameter(resources, fields={'series': ['foo', 'bar']})
         assert exc_info.value.type == 'series'
 
@@ -71,13 +71,13 @@ class TestIncludeParameter(object):
         assert IncludeParameter(resources, 'stores', include).tree == tree
 
     def test_invalid_relationship(self, resources):
-        with pytest.raises(exc.InvalidInclude) as exc_info:
+        with pytest.raises(errors.InvalidInclude) as exc_info:
             IncludeParameter(resources, 'stores', 'books.invalid')
         assert exc_info.value.type == 'books'
         assert exc_info.value.relationship == 'invalid'
 
     def test_invalid_format(self, resources):
-        with pytest.raises(exc.InvalidIncludeFormat):
+        with pytest.raises(errors.InvalidIncludeFormat):
             IncludeParameter(resources, 'stores', {'foo': 'bar'})
 
     def test___repr__(self, resources):

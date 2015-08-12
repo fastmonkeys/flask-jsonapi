@@ -2,13 +2,13 @@ import datetime
 
 import pytest
 
-from flask_jsonapi.paginator import PagedPagination
+from flask_jsonapi.params import Parameters
 from flask_jsonapi.serializer import Serializer
 
 
 @pytest.fixture
 def books(db, models, fantasy_database):
-    return db.session.query(models.Book)
+    return db.session.query(models.Book).all()
 
 
 @pytest.fixture
@@ -22,17 +22,23 @@ def author(db, models, fantasy_database):
 
 
 def test_single_resource(jsonapi, resources, book, db):
-    serializer = Serializer(jsonapi.resources, 'books')
+    params = Parameters(
+        resource_registry=jsonapi.resources,
+        type='books',
+        params={}
+    )
+    serializer = Serializer(
+        resource_registry=jsonapi.resources,
+        params=params,
+        base_url='/api'
+    )
     data = serializer.dump(book)
     assert data == {
-        "links": {
-            "self": "http://example.com/books/11"
-        },
         "data": {
             "type": "books",
             "id": "11",
             "links": {
-                "self": "http://example.com/books/11"
+                "self": "/api/books/11"
             },
             "attributes": {
                 "title": "The Hobbit",
@@ -42,9 +48,9 @@ def test_single_resource(jsonapi, resources, book, db):
                 "author": {
                     "links": {
                         "self": (
-                            "http://example.com/books/11/relationships/author"
+                            "/api/books/11/relationships/author"
                         ),
-                        "related": "http://example.com/books/11/author"
+                        "related": "/api/books/11/author"
                     },
                     "data": {
                         "type": "authors",
@@ -54,10 +60,10 @@ def test_single_resource(jsonapi, resources, book, db):
                 "chapters": {
                     "links": {
                         "self": (
-                            "http://example.com/books/11/relationships"
+                            "/api/books/11/relationships"
                             "/chapters"
                         ),
-                        "related": "http://example.com/books/11/chapters"
+                        "related": "/api/books/11/chapters"
                     },
                     "data": [
                         {"id": "271", "type": "chapters"},
@@ -84,10 +90,10 @@ def test_single_resource(jsonapi, resources, book, db):
                 "series": {
                     "links": {
                         "self": (
-                            "http://example.com/books/11/relationships/"
+                            "/api/books/11/relationships/"
                             "series"
                         ),
-                        "related": "http://example.com/books/11/series"
+                        "related": "/api/books/11/series"
                     },
                     "data": None
                 }
@@ -96,22 +102,43 @@ def test_single_resource(jsonapi, resources, book, db):
     }
 
 
-def test_sparse_fieldsets(jsonapi, resources, book, db):
+def test_single_resource(jsonapi, resources, db):
+    params = Parameters(
+        resource_registry=jsonapi.resources,
+        type='books',
+        params={}
+    )
     serializer = Serializer(
-        jsonapi.resources,
-        'books',
-        fields={'books': 'title,author'}
+        resource_registry=jsonapi.resources,
+        params=params,
+        base_url='/api'
+    )
+    data = serializer.dump(None)
+    assert data == {
+        "data": None
+    }
+
+
+def test_sparse_fieldsets(jsonapi, resources, book, db):
+    params = Parameters(
+        resource_registry=jsonapi.resources,
+        type='books',
+        params={
+            'fields': {'books': 'title,author'}
+        }
+    )
+    serializer = Serializer(
+        resource_registry=jsonapi.resources,
+        params=params,
+        base_url='/api'
     )
     data = serializer.dump(book)
     assert data == {
-        "links": {
-            "self": "http://example.com/books/11"
-        },
         "data": {
             "type": "books",
             "id": "11",
             "links": {
-                "self": "http://example.com/books/11"
+                "self": "/api/books/11"
             },
             "attributes": {
                 "title": "The Hobbit",
@@ -120,9 +147,9 @@ def test_sparse_fieldsets(jsonapi, resources, book, db):
                 "author": {
                     "links": {
                         "self": (
-                            "http://example.com/books/11/relationships/author"
+                            "/api/books/11/relationships/author"
                         ),
-                        "related": "http://example.com/books/11/author"
+                        "related": "/api/books/11/author"
                     },
                     "data": {
                         "type": "authors",
@@ -135,22 +162,26 @@ def test_sparse_fieldsets(jsonapi, resources, book, db):
 
 
 def test_inclusion_of_related_resources(jsonapi, resources, author, db):
+    params = Parameters(
+        resource_registry=jsonapi.resources,
+        type='authors',
+        params={
+            'fields': {
+                'authors': 'name,books',
+                'books': 'title',
+                'series': 'title'
+            },
+            'include': 'books,books.series'
+        }
+    )
     serializer = Serializer(
-        jsonapi.resources,
-        'authors',
-        fields={
-            'authors': 'name,books',
-            'books': 'title',
-            'series': 'title'
-        },
-        include='books,books.series'
+        resource_registry=jsonapi.resources,
+        params=params,
+        base_url='/api'
     )
     data = serializer.dump(author)
     assert len(data['included']) == 5
     assert data == {
-        "links": {
-            "self": "http://example.com/authors/1"
-        },
         "data": {
             "id": "1",
             "type": "authors",
@@ -166,15 +197,13 @@ def test_inclusion_of_related_resources(jsonapi, resources, author, db):
                         {"id": "11", "type": "books"}
                     ],
                     "links": {
-                        "related": "http://example.com/authors/1/books",
-                        "self": (
-                            "http://example.com/authors/1/relationships/books"
-                        )
+                        "related": "/api/authors/1/books",
+                        "self": "/api/authors/1/relationships/books"
                     }
                 }
             },
             "links": {
-                "self": "http://example.com/authors/1"
+                "self": "/api/authors/1"
             },
         },
         "included": [
@@ -185,7 +214,7 @@ def test_inclusion_of_related_resources(jsonapi, resources, author, db):
                     "title": "The Fellowship of the Ring"
                 },
                 "links": {
-                    "self": "http://example.com/books/1"
+                    "self": "/api/books/1"
                 },
             },
             {
@@ -195,7 +224,7 @@ def test_inclusion_of_related_resources(jsonapi, resources, author, db):
                     "title": "The Lord of the Rings"
                 },
                 "links": {
-                    "self": "http://example.com/series/1"
+                    "self": "/api/series/1"
                 },
             },
             {
@@ -205,7 +234,7 @@ def test_inclusion_of_related_resources(jsonapi, resources, author, db):
                     "title": "The Two Towers"
                 },
                 "links": {
-                    "self": "http://example.com/books/2"
+                    "self": "/api/books/2"
                 },
             },
             {
@@ -215,7 +244,7 @@ def test_inclusion_of_related_resources(jsonapi, resources, author, db):
                     "title": "Return of the King"
                 },
                 "links": {
-                    "self": "http://example.com/books/3"
+                    "self": "/api/books/3"
                 },
             },
             {
@@ -225,7 +254,7 @@ def test_inclusion_of_related_resources(jsonapi, resources, author, db):
                     "title": "The Hobbit"
                 },
                 "links": {
-                    "self": "http://example.com/books/11"
+                    "self": "/api/books/11"
                 },
             },
         ]
@@ -233,31 +262,11 @@ def test_inclusion_of_related_resources(jsonapi, resources, author, db):
 
 
 def test_resource_collection(jsonapi, resources, books, db):
-    serializer = Serializer(jsonapi.resources, 'books')
-    data = serializer.dump(books, many=True)
-    assert len(data['data']) == 11
-    assert data['links'] == {
-        'self': 'http://example.com/books'
-    }
-
-
-def test_resource_collection_with_pagination(jsonapi, resources, books, db):
-    serializer = Serializer(
-        jsonapi.resources,
-        'books',
-        pagination=PagedPagination(number=1, size=20, count=157)
+    params = Parameters(
+        resource_registry=jsonapi.resources,
+        type='books',
+        params={}
     )
-    data = serializer.dump(books, many=True)
-    assert data['links'] == {
-        "self": "http://example.com/books",
-        "first": (
-            "http://example.com/books?page%5Bnumber%5D=1&page%5Bsize%5D=20"
-        ),
-        "last": (
-            "http://example.com/books?page%5Bnumber%5D=8&page%5Bsize%5D=20"
-        ),
-        "prev": None,
-        "next": (
-            "http://example.com/books?page%5Bnumber%5D=2&page%5Bsize%5D=20"
-        ),
-    }
+    serializer = Serializer(resource_registry=jsonapi.resources, params=params)
+    data = serializer.dump(books)
+    assert len(data['data']) == 11

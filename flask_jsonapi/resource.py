@@ -1,15 +1,16 @@
-from . import exc
+from . import exceptions
+from .controller import Controller
 from .paginator import PagedPaginator
 
 
 class Resource(object):
     def __init__(
-        self, type, model_class, repository, attributes=None,
-        relationships=None, paginator=None
+        self, type, model_class, store, attributes=None, relationships=None,
+        paginator=None
     ):
         self.type = type
         self.model_class = model_class
-        self.repository = repository
+        self.store = store
         self.attributes = frozenset(attributes or [])
         self.relationships = frozenset(relationships or [])
         self.paginator = paginator if paginator else PagedPaginator()
@@ -21,14 +22,14 @@ class Resource(object):
 
     def _check_reserved_field_names(self):
         if {'id', 'type'} & self.fields:
-            raise exc.FieldNamingConflict(
+            raise exceptions.FieldNamingConflict(
                 "A resource cannot have an attribute or a relationship named "
                 "'type' or 'id'."
             )
 
     def _check_field_naming_conflicts(self):
         if self.attributes & self.relationships:
-            raise exc.FieldNamingConflict(
+            raise exceptions.FieldNamingConflict(
                 'A resource cannot have an attribute and a relationship with '
                 'the same name.'
             )

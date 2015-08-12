@@ -3,40 +3,13 @@ from werkzeug.exceptions import BadRequest, NotFound
 from . import error_codes
 
 
-class JSONAPIError(Exception):
-    pass
-
-
-class ResourceAlreadyRegistered(JSONAPIError):
-    pass
-
-
-class FieldNamingConflict(JSONAPIError):
-    pass
-
-
-class InvalidRelationship(JSONAPIError):
-    def __init__(self, model_class, relationship):
-        self.model_class = model_class
-        self.relationship = relationship
-
-    def __str__(self):
-        return (
-            '{relationship} is not a valid relationship for '
-            '{model_class}.'
-        ).format(
-            relationship=self.relationship,
-            model_class=self.model_class.__name__
-        )
-
-
-class RequestError(JSONAPIError):
+class Error(Exception):
     @property
     def errors(self):
         raise NotImplementedError
 
 
-class InvalidResource(RequestError):
+class InvalidResource(Error):
     def __init__(self, type_):
         self.type = type_
 
@@ -54,7 +27,29 @@ class InvalidResource(RequestError):
         ]
 
 
-class ResourceNotFound(RequestError):
+class RelationshipNotFound(Error):
+    def __init__(self, type, relation):
+        self.type = type
+        self.relation = relation
+
+    @property
+    def errors(self):
+        return [
+            {
+                "code": error_codes.RELATIONSHIP_NOT_FOUND,
+                "status": NotFound.code,
+                "title": "Relationship not found",
+                "detail": (
+                    "{relation} is not a valid relationship for {type}."
+                ).format(
+                    relation=self.relation,
+                    type=self.type
+                )
+            }
+        ]
+
+
+class ResourceNotFound(Error):
     def __init__(self, id):
         self.id = id
 
@@ -73,7 +68,7 @@ class ResourceNotFound(RequestError):
         ]
 
 
-class FieldTypeMissing(RequestError):
+class FieldTypeMissing(Error):
     @property
     def errors(self):
         return [
@@ -89,7 +84,7 @@ class FieldTypeMissing(RequestError):
         ]
 
 
-class InvalidFieldFormat(RequestError):
+class InvalidFieldFormat(Error):
     def __init__(self, type):
         self.type = type
 
@@ -112,7 +107,7 @@ class InvalidFieldFormat(RequestError):
         ]
 
 
-class InvalidFieldType(RequestError):
+class InvalidFieldType(Error):
     def __init__(self, type):
         self.type = type
 
@@ -133,7 +128,7 @@ class InvalidFieldType(RequestError):
         ]
 
 
-class InvalidField(RequestError):
+class InvalidField(Error):
     def __init__(self, type, field):
         self.type = type
         self.field = field
@@ -156,7 +151,7 @@ class InvalidField(RequestError):
         ]
 
 
-class InvalidIncludeFormat(RequestError):
+class InvalidIncludeFormat(Error):
     @property
     def errors(self):
         return [
@@ -175,7 +170,7 @@ class InvalidIncludeFormat(RequestError):
         ]
 
 
-class InvalidInclude(RequestError):
+class InvalidInclude(Error):
     def __init__(self, type, relationship):
         self.type = type
         self.relationship = relationship
@@ -201,7 +196,7 @@ class InvalidInclude(RequestError):
         ]
 
 
-class InvalidSortFormat(RequestError):
+class InvalidSortFormat(Error):
     @property
     def errors(self):
         return [
@@ -220,7 +215,7 @@ class InvalidSortFormat(RequestError):
         ]
 
 
-class InvalidSortField(RequestError):
+class InvalidSortField(Error):
     def __init__(self, type, field):
         self.type = type
         self.field = field
@@ -243,7 +238,7 @@ class InvalidSortField(RequestError):
         ]
 
 
-class InvalidPageFormat(RequestError):
+class InvalidPageFormat(Error):
     @property
     def errors(self):
         return [
@@ -258,7 +253,7 @@ class InvalidPageFormat(RequestError):
         ]
 
 
-class InvalidPageParameters(RequestError):
+class InvalidPageParameters(Error):
     def __init__(self, params):
         self.params = params
 
@@ -279,7 +274,7 @@ class InvalidPageParameters(RequestError):
         ]
 
 
-class InvalidPageValue(RequestError):
+class InvalidPageValue(Error):
     def __init__(self, param, message):
         self.param = param
         self.message = message
@@ -296,4 +291,25 @@ class InvalidPageValue(RequestError):
                     "parameter": "page[{param}]".format(param=self.param)
                 }
             }
+        ]
+
+
+class ParametersNotAllowed(Error):
+    def __init__(self, params):
+        self.params = params
+
+    @property
+    def errors(self):
+        return [
+            {
+                "status": BadRequest.code,
+                "code": error_codes.PARAMETER_NOT_ALLOWED,
+                "title": "Parameter not allowed",
+                "detail": "{param} is not a valid parameter".format(
+                    param=param
+                ),
+                "source": {
+                    "parameter": "{param}".format(param=param)
+                }
+            } for param in sorted(self.params)
         ]
