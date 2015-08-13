@@ -26,7 +26,7 @@ FANTASY_DATABASE_FILENAME = os.path.join(
 class JSONResponse(Response):
     @property
     def json(self):
-        return json.loads(self.data)
+        return json.loads(self.data.decode('utf8'))
 
 
 class JSONEncoder(_JSONEncoder):

@@ -47,7 +47,7 @@ class TestSparseFieldsets(object):
 
     def test_returns_only_requested_fields(self, response):
         first_book = response.json['data'][0]
-        assert first_book['attributes'].keys() == ['title']
+        assert list(first_book['attributes'].keys()) == ['title']
         assert 'relationships' not in first_book
 
 

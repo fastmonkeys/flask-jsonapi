@@ -85,7 +85,7 @@ class TestToOneRelationWithSparseFieldsets(object):
 
     def test_returns_only_requested_fields(self, response):
         author = response.json['data']
-        assert author['attributes'].keys() == ['name']
+        assert list(author['attributes'].keys()) == ['name']
         assert 'relationships' not in author
 
 
@@ -99,7 +99,7 @@ class TestToManyRelationWithSparseFieldsets(object):
 
     def test_returns_only_requested_fields(self, response):
         book = response.json['data'][0]
-        assert book['attributes'].keys() == ['title']
+        assert list(book['attributes'].keys()) == ['title']
         assert 'relationships' not in book
 
 
