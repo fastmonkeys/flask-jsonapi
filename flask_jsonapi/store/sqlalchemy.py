@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import contextlib
+
 import sqlalchemy
 from sqlalchemy import orm
 
@@ -87,15 +89,22 @@ class SQLAlchemyStore(Store):
             query = query.offset(pagination.offset).limit(pagination.limit)
         return query
 
-    def create(self, model_class):
-        obj = self.model_class()
+    def create(self, model_class, id, fields):
+        if id is not None and self._exists(model_class, id):
+            raise exceptions.ObjectAlreadyExists
+        obj = model_class(id=id, **fields)
         self.session.add(obj)
+        self.session.commit()
         return obj
+
+    def _exists(self, model_class, id):
+        query = self.session.query(model_class).filter_by(id=id)
+        return self.session.query(query.exists()).scalar()
 
     def delete(self, obj):
         self.session.delete(obj)
 
-    def replace_attribute(self, obj, name, value):
+    def set_attribute(self, obj, name, value):
         setattr(obj, name, value)
 
     def replace_to_one_relationship(self, obj, name, value):

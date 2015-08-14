@@ -1,4 +1,4 @@
-from werkzeug.exceptions import BadRequest, NotFound
+from werkzeug.exceptions import BadRequest, Conflict, Forbidden, NotFound
 
 from . import error_codes
 
@@ -7,6 +7,60 @@ class Error(Exception):
     @property
     def errors(self):
         raise NotImplementedError
+
+
+class InvalidJSON(Error):
+    @property
+    def errors(self):
+        return [
+            {
+                "code": error_codes.INVALID_JSON,
+                "status": BadRequest.code,
+                "title": "Invalid JSON",
+                "detail": "Request body is not valid JSON."
+            }
+        ]
+
+
+class TypeMismatch(Error):
+    def __init__(self, type):
+        self.type = type
+
+    @property
+    def errors(self):
+        return [
+            {
+                "code": error_codes.TYPE_MISMATCH,
+                "status": Conflict.code,
+                "title": "Type mismatch",
+                "detail": (
+                    "{type} is not a valid type for this operation."
+                ).format(type=self.type),
+                "source": {
+                    "pointer": '/data/type'
+                }
+            }
+        ]
+
+
+class ValidationError(Error):
+    def __init__(self, detail, path):
+        self.detail = detail
+        self.path = path
+
+    @property
+    def errors(self):
+        return [
+            {
+                "code": error_codes.VALIDATION_ERROR,
+                "status": BadRequest.code,
+                "title": "Validation error",
+                "detail": self.detail,
+                "source": {
+                    "pointer": '/' + '/'.join(self.path)
+                }
+            }
+        ]
 
 
 class InvalidResource(Error):
@@ -312,4 +366,48 @@ class ParametersNotAllowed(Error):
                     "parameter": "{param}".format(param=param)
                 }
             } for param in sorted(self.params)
+        ]
+
+
+class ClientGeneratedIDsUnsupported(Error):
+    def __init__(self, type):
+        self.type = type
+
+    @property
+    def errors(self):
+        return [
+            {
+                "status": Forbidden.code,
+                "code": error_codes.CLIENT_GENERATED_IDS_UNSUPPORTED,
+                "title": "Client-generated IDs unsupported",
+                "detail": (
+                    "The server does not support creation of {type} resource "
+                    "with a client-generated ID."
+                ).format(type=self.type),
+                "source": {
+                    "pointer": "/data/id"
+                }
+            }
+        ]
+
+
+class ResourceAlreadyExists(Error):
+    def __init__(self, type, id):
+        self.type = type
+        self.id = id
+
+    @property
+    def errors(self):
+        return [
+            {
+                "status": Conflict.code,
+                "code": error_codes.RESOURCE_ALREADY_EXISTS,
+                "title": "Resource already exists",
+                "detail": (
+                    "A resource of type {type} and id {id} already exists."
+                ).format(type=self.type, id=self.id),
+                "source": {
+                    "pointer": "/data/id"
+                }
+            }
         ]

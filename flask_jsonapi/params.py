@@ -10,9 +10,8 @@ class Parameters(object):
             params.pop('fields', None)
         )
         self.include = IncludeParameter(
-            resource_registry,
-            type,
-            params.pop('include', None)
+            resource=resource_registry.by_type[type],
+            include=params.pop('include', None)
         )
         self.pagination = resource.paginator.paginate(
             params.pop('page', {})
@@ -73,9 +72,8 @@ class FieldsParameter(object):
 
 
 class IncludeParameter(object):
-    def __init__(self, resource_registry, type, include):
-        self._resource_registry = resource_registry
-        self._type = type
+    def __init__(self, resource, include):
+        self._resource = resource
         self.raw = include
         self.paths = self._parse_paths()
         self.tree = {}
@@ -96,19 +94,13 @@ class IncludeParameter(object):
 
     def _add_relationship_path_to_tree(self, path):
         current_node = self.tree
-        resource = self._resource_registry.by_type[self._type]
+        resource = self._resource
         for name in path:
             if name not in current_node:
                 current_node[name] = {}
             if name not in resource.relationships:
                 raise errors.InvalidInclude(resource.type, name)
-            related_model_class = resource.store.get_related_model_class(
-                model_class=resource.model_class,
-                relationship=name
-            )
-            resource = self._resource_registry.by_model_class[
-                related_model_class
-            ]
+            resource = resource.get_related_resource(name)
             current_node = current_node[name]
 
     def __repr__(self):

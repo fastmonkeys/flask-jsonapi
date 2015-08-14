@@ -1,4 +1,3 @@
-
 import json
 import os
 from datetime import date, datetime
@@ -8,7 +7,6 @@ from bunch import Bunch
 from flask import Flask, Response
 from flask.json import JSONEncoder as _JSONEncoder
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.http import http_date
 
 from flask_jsonapi import JSONAPI
 from flask_jsonapi.resource import Resource
@@ -105,6 +103,10 @@ def models(db):
         date_of_birth = db.Column(db.Date, nullable=False)
         date_of_death = db.Column(db.Date)
 
+        @db.validates('date_of_birth')
+        def validate_date_of_birth(self, key, date_of_birth):
+            return datetime.strptime(date_of_birth, '%Y-%m-%d').date()
+
     class Book(db.Model):
         __tablename__ = 'books'
         id = db.Column(db.Integer, primary_key=True)
@@ -118,6 +120,10 @@ def models(db):
         series = db.relationship(Series, backref='books')
         date_published = db.Column(db.Date, nullable=False)
         title = db.Column(db.Text)
+
+        @db.validates('date_published')
+        def validate_date_published(self, key, date_published):
+            return datetime.strptime(date_published, '%Y-%m-%d').date()
 
     class Chapter(db.Model):
         __tablename__ = 'chapters'
@@ -134,7 +140,7 @@ def models(db):
         __tablename__ = 'stores'
         id = db.Column(db.Integer, primary_key=True)
         name = db.Column(db.Text, nullable=False)
-        books = db.relationship(Book, secondary=book_store)
+        books = db.relationship(Book, secondary=book_store, backref='stores')
 
     db.create_all()
 
@@ -159,7 +165,8 @@ def resources(jsonapi, db, models):
             model_class=models.Author,
             store=SQLAlchemyStore(db.session),
             attributes=('name', 'date_of_birth', 'date_of_death'),
-            relationships=('books',)
+            relationships=('books',),
+            allow_client_generated_ids=True
         )
     )
     jsonapi.resources.register(
@@ -168,7 +175,7 @@ def resources(jsonapi, db, models):
             model_class=models.Book,
             store=SQLAlchemyStore(db.session),
             attributes=('date_published', 'title'),
-            relationships=('author', 'chapters', 'series')
+            relationships=('author', 'chapters', 'series', 'stores')
         )
     )
     jsonapi.resources.register(

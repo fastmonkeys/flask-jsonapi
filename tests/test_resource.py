@@ -35,3 +35,23 @@ def test_cannot_have_attribute_and_relationship_with_same_name(db, models):
         "A resource cannot have an attribute and a relationship "
         "with the same name."
     )
+
+
+def test_validates_relationships(db, models):
+    with pytest.raises(exceptions.InvalidRelationship):
+        Resource(
+            type='books',
+            model_class=models.Book,
+            store=SQLAlchemyStore(db.session),
+            relationships=['foobar']
+        )
+
+
+def test_to_one_relationships(resources):
+    resource = resources.by_type['books']
+    assert resource.to_one_relationships == frozenset({'author', 'series'})
+
+
+def test_to_many_relationships(resources):
+    resource = resources.by_type['books']
+    assert resource.to_many_relationships == frozenset({'chapters', 'stores'})

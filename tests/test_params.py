@@ -19,6 +19,7 @@ class TestFieldsParameter(object):
             'chapters',
             'date_published',
             'series',
+            'stores',
             'title',
         }
         assert fields['chapters'] == {'title', 'ordering', 'book'}
@@ -68,22 +69,30 @@ class TestIncludeParameter(object):
         ]
     )
     def test_tree(self, resources, include, tree):
-        assert IncludeParameter(resources, 'stores', include).tree == tree
+        assert IncludeParameter(
+            resource=resources.by_type['stores'],
+            include=include
+        ).tree == tree
 
     def test_invalid_relationship(self, resources):
         with pytest.raises(errors.InvalidInclude) as exc_info:
-            IncludeParameter(resources, 'stores', 'books.invalid')
+            IncludeParameter(
+                resource=resources.by_type['stores'],
+                include='books.invalid'
+            )
         assert exc_info.value.type == 'books'
         assert exc_info.value.relationship == 'invalid'
 
     def test_invalid_format(self, resources):
         with pytest.raises(errors.InvalidIncludeFormat):
-            IncludeParameter(resources, 'stores', {'foo': 'bar'})
+            IncludeParameter(
+                resource=resources.by_type['stores'],
+                include={'foo': 'bar'}
+            )
 
     def test___repr__(self, resources):
         include = IncludeParameter(
-            resources,
-            type='stores',
+            resource=resources.by_type['stores'],
             include='books.author,books'
         )
         assert repr(include) == "<IncludeParameter 'books.author,books'>"

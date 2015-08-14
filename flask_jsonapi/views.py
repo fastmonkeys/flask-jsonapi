@@ -1,4 +1,3 @@
-import qstring
 from flask import Blueprint, current_app, jsonify, request
 from werkzeug.exceptions import BadRequest
 from werkzeug.local import LocalProxy
@@ -26,17 +25,17 @@ controller = LocalProxy(lambda: current_app.extensions['jsonapi'].controller)
 
 @blueprint.route('/<type>', methods=['GET'])
 def fetch(type):
-    return controller.fetch(type, _get_params())
+    return controller.fetch(type)
 
 
 @blueprint.route('/<type>/<id>', methods=['GET'])
 def fetch_one(type, id):
-    return controller.fetch_one(type, id, _get_params())
+    return controller.fetch_one(type, id)
 
 
 @blueprint.route('/<type>/<id>/<relation>', methods=['GET'])
 def fetch_related(type, id, relation):
-    return controller.fetch_related(type, id, relation, _get_params())
+    return controller.fetch_related(type, id, relation)
 
 
 @blueprint.route('/<type>/<id>/relationships/<relation>', methods=['GET'])
@@ -46,7 +45,7 @@ def fetch_relationship(type, id, relation):
 
 @blueprint.route('/<type>', methods=['POST'])
 def create(type):
-    pass
+    return controller.create(type)
 
 
 @blueprint.route('/<type>/<id>', methods=['PATCH'])
@@ -67,7 +66,3 @@ def add_to_relationship(type, id, relation):
 @blueprint.route('/<type>/<id>/relationships/<relation>', methods=['DELETE'])
 def delete_from_relationship(type, id, relation):
     pass
-
-
-def _get_params():
-    return qstring.nest(request.args.items(multi=True))

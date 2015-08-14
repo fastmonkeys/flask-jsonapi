@@ -14,6 +14,10 @@ class ObjectNotFound(JSONAPIException):
     pass
 
 
+class ObjectAlreadyExists(JSONAPIException):
+    pass
+
+
 class InvalidRelationship(JSONAPIException):
     def __init__(self, model_class, relationship):
         self.model_class = model_class

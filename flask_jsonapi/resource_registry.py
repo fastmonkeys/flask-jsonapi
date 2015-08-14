@@ -19,5 +19,6 @@ class ResourceRegistry(object):
                 'registered.'.format(model_class=resource.model_class)
             )
 
+        resource.register(self)
         self.by_type[resource.type] = resource
         self.by_model_class[resource.model_class] = resource
