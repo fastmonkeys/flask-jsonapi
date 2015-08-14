@@ -14,21 +14,21 @@ class Controller(object):
     def fetch(self, type):
         resource = self._get_resource(type)
         params = self._build_params(type)
-        objs = resource.store.fetch(resource.model_class, params)
-        return self._serialize(objs, params)
+        instances = resource.store.fetch(resource.model_class, params)
+        return self._serialize(instances, params)
 
     def fetch_one(self, type, id):
         resource = self._get_resource(type)
         params = self._build_params(type)
-        obj = self._fetch_object(resource, id, params)
-        return self._serialize(obj, params)
+        instance = self._fetch_object(resource, id, params)
+        return self._serialize(instance, params)
 
     def fetch_related(self, type, id, relation):
         resource = self._get_resource(type)
         related_resource = self._get_related_resource(resource, relation)
         params = self._build_params(related_resource.type)
-        obj = self._fetch_object(resource, id)
-        related = resource.store.fetch_related(obj, relation, params)
+        instance = self._fetch_object(resource, id)
+        related = resource.store.fetch_related(instance, relation, params)
         return self._serialize(related, params)
 
     def create(self, type):
@@ -38,7 +38,7 @@ class Controller(object):
         self._validate_create_request(resource, payload)
         id = payload['data'].get('id')
         try:
-            obj = resource.store.create(
+            instance = resource.store.create(
                 model_class=resource.model_class,
                 id=id,
                 fields=self._parse_fields(resource, payload)

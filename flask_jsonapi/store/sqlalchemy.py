@@ -29,17 +29,17 @@ class SQLAlchemyStore(Store):
         except orm.exc.NoResultFound:
             raise exceptions.ObjectNotFound
 
-    def get_related(self, obj, relationship):
-        return getattr(obj, relationship)
+    def get_related(self, instance, relationship):
+        return getattr(instance, relationship)
 
-    def fetch_related(self, obj, relationship, params=None):
-        if self.is_to_many_relationship(obj.__class__, relationship):
-            return self._fetch_many_related(obj, relationship, params)
+    def fetch_related(self, instance, relationship, params=None):
+        if self.is_to_many_relationship(instance.__class__, relationship):
+            return self._fetch_many_related(instance, relationship, params)
         else:
-            return self._fetch_one_related(obj, relationship, params)
+            return self._fetch_one_related(instance, relationship, params)
 
-    def _fetch_one_related(self, obj, relationship, params):
-        query = self._query_related(obj, relationship)
+    def _fetch_one_related(self, instance, relationship, params):
+        query = self._query_related(instance, relationship)
         if params:
             query = self._include_related(query, params.include)
         try:
@@ -47,24 +47,24 @@ class SQLAlchemyStore(Store):
         except orm.exc.NoResultFound:
             return None
 
-    def _fetch_many_related(self, obj, relationship, params):
-        query = self._query_related(obj, relationship)
+    def _fetch_many_related(self, instance, relationship, params):
+        query = self._query_related(instance, relationship)
         if params:
             query = self._include_related(query, params.include)
             query = self._paginate(query, params.pagination)
         return query.all()
 
-    def _query_related(self, obj, relationship):
+    def _query_related(self, instance, relationship):
         related_model_class = self.get_related_model_class(
-            obj.__class__,
+            instance.__class__,
             relationship
         )
         relationship_property = self._get_relationship_property(
-            obj.__class__,
+            instance.__class__,
             relationship
         )
         query = self.session.query(related_model_class)
-        query = query.filter(relationship_property._with_parent(obj))
+        query = query.filter(relationship_property._with_parent(instance))
         if relationship_property.order_by:
             query = query.order_by(*relationship_property.order_by)
         return query
@@ -92,42 +92,43 @@ class SQLAlchemyStore(Store):
     def create(self, model_class, id, fields):
         if id is not None and self._exists(model_class, id):
             raise exceptions.ObjectAlreadyExists
-        obj = model_class(id=id, **fields)
-        self.session.add(obj)
+        instance = model_class(id=id, **fields)
+        self.session.add(instance)
         self.session.commit()
-        return obj
+        return instance
 
     def _exists(self, model_class, id):
         query = self.session.query(model_class).filter_by(id=id)
         return self.session.query(query.exists()).scalar()
 
-    def delete(self, obj):
-        self.session.delete(obj)
+    def delete(self, instance):
+        self.session.delete(instance)
+        self.session.commit()
 
-    def set_attribute(self, obj, name, value):
-        setattr(obj, name, value)
+    def set_attribute(self, instance, name, value):
+        setattr(instance, name, value)
 
-    def replace_to_one_relationship(self, obj, name, value):
-        setattr(obj, name, value)
+    def replace_to_one_relationship(self, instance, name, value):
+        setattr(instance, name, value)
 
-    def create_to_many_relationship(self, obj, name, value):
-        getattr(obj, name).append(value)
+    def create_to_many_relationship(self, instance, name, value):
+        getattr(instance, name).append(value)
 
-    def replace_to_many_relationship(self, obj, name, values):
-        setattr(obj, name, values)
+    def replace_to_many_relationship(self, instance, name, values):
+        setattr(instance, name, values)
 
-    def remove_to_many_relationship(self, obj, name, value):
-        getattr(obj, name).remove(value)
+    def remove_to_many_relationship(self, instance, name, value):
+        getattr(instance, name).remove(value)
 
     def get_related_model_class(self, model_class, relationship):
         prop = self._get_relationship_property(model_class, relationship)
         return prop.mapper.class_
 
-    def get_attribute(self, obj, attribute):
-        return getattr(obj, attribute)
+    def get_attribute(self, instance, attribute):
+        return getattr(instance, attribute)
 
-    def get_id(self, obj):
-        return str(obj.id)
+    def get_id(self, instance):
+        return str(instance.id)
 
     def is_to_many_relationship(self, model_class, relationship):
         mapper = sqlalchemy.inspect(model_class)
