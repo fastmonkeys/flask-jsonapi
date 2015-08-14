@@ -64,6 +64,37 @@ class TestCreateRequestValidation(object):
         assert excinfo.value.message == "'foobar' is not of type 'object'"
         assert list(excinfo.value.path) == ['data', 'attributes']
 
+    def test_attributes_can_include_known_attributes(self, schema):
+        jsonschema.validate(
+            {
+                'data': {
+                    'type': 'books',
+                    'attributes': {
+                        'title': 'The Hobbit'
+                    }
+                }
+            },
+            schema
+        )
+
+    def test_attributes_must_not_include_unknown_members(self, schema):
+        with pytest.raises(jsonschema.ValidationError) as excinfo:
+            jsonschema.validate(
+                {
+                    'data': {
+                        'type': 'books',
+                        'attributes': {
+                            'foo': 'bar'
+                        }
+                    }
+                },
+                schema
+            )
+        assert excinfo.value.message == (
+            "Additional properties are not allowed ('foo' was unexpected)"
+        )
+        assert list(excinfo.value.path) == ['data', 'attributes']
+
     def test_relationships_must_be_an_object(self, schema):
         with pytest.raises(jsonschema.ValidationError) as excinfo:
             jsonschema.validate(
@@ -88,6 +119,26 @@ class TestCreateRequestValidation(object):
             )
         assert excinfo.value.message == "'foobar' is not of type 'object'"
         assert list(excinfo.value.path) == ['data', 'relationships', 'author']
+
+    def test_relationships_must_not_include_unknown_members(self, schema):
+        with pytest.raises(jsonschema.ValidationError) as excinfo:
+            jsonschema.validate(
+                {
+                    'data': {
+                        'type': 'books',
+                        'relationships': {
+                            'foo': {
+                                'data': None
+                            }
+                        }
+                    }
+                },
+                schema
+            )
+        assert excinfo.value.message == (
+            "Additional properties are not allowed ('foo' was unexpected)"
+        )
+        assert list(excinfo.value.path) == ['data', 'relationships']
 
     def test_relationship_must_have_data(self, schema):
         with pytest.raises(jsonschema.ValidationError) as excinfo:

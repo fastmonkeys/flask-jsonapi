@@ -7,17 +7,11 @@ def get_create_request_schema(resource):
                 "properties": {
                     "type": {"type": "string"},
                     "id": {"type": "string"},
-                    "attributes": {"type": "object"},
+                    "attributes": {"$ref": "#/definitions/attributes"},
                     "relationships": {"$ref": "#/definitions/relationships"}
                 }
             },
-            "attributes": {
-                "type": "object",
-                "properties": {
-                    attribute: {}
-                    for attribute in resource.attributes
-                }
-            },
+            "attributes": _get_attributes_definition(resource),
             "relationships": _get_relationships_definition(resource),
             "relationshipToOne": {
                 "type": ["null", "object"],
@@ -53,13 +47,25 @@ def get_create_request_schema(resource):
     }
 
 
+def _get_attributes_definition(resource):
+    return {
+        "type": "object",
+        "properties": {
+            attribute: {}
+            for attribute in resource.attributes
+        },
+        "additionalProperties": False
+    }
+
+
 def _get_relationships_definition(resource):
     return {
         "type": "object",
         "properties": {
             relationship: _get_relationship_definition(resource, relationship)
             for relationship in resource.relationships
-        }
+        },
+        "additionalProperties": False
     }
 
 
