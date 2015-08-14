@@ -1,67 +1,37 @@
 from . import exceptions
-from .controller import Controller
 from .paginator import PagedPaginator
 
 
 class Resource(object):
-    def __init__(
-        self, type, model_class, store, attributes=None, relationships=None,
-        paginator=None, allow_client_generated_ids=False
-    ):
+    def __init__(self, type, model_class, store, paginator=None):
         self._registry = None
         self.type = type
         self.model_class = model_class
         self.store = store
-        self.attributes = frozenset(attributes or [])
-        self.relationships = frozenset(relationships or [])
+        self.fields = {}
+        self.attributes = {}
+        self.relationships = {}
         self.paginator = paginator if paginator else PagedPaginator()
-        self._validate_field_names()
-        self._validate_relationships()
-        self.to_many_relationships = frozenset(
-            relationship
-            for relationship in self.relationships
-            if self.store.is_to_many_relationship(
-                self.model_class,
-                relationship
-            )
-        )
-        self.to_one_relationships = (
-            self.relationships - self.to_many_relationships
-        )
-        self.allow_client_generated_ids = allow_client_generated_ids
+        self.allow_client_generated_ids = False
 
-    def _validate_field_names(self):
-        self._check_reserved_field_names()
-        self._check_field_naming_conflicts()
+    def add_attribute(self, *args, **kwargs):
+        field = Attribute(self, *args, **kwargs)
+        self._add_field(field)
+        self.attributes[field.name] = field
 
-    def _validate_relationships(self):
-        for relationship in self.relationships:
-            self.store.validate_relationship(self.model_class, relationship)
+    def add_relationship(self, *args, **kwargs):
+        field = Relationship(self, *args, **kwargs)
+        self._add_field(field)
+        self.relationships[field.name] = field
 
-    def _check_reserved_field_names(self):
-        if {'id', 'type'} & self.fields:
+    def _add_field(self, field):
+        if field.name in self.fields:
             raise exceptions.FieldNamingConflict(
-                "A resource cannot have an attribute or a relationship named "
-                "'type' or 'id'."
+                'The resource already has a field called {field!r}.'.format(
+                    field=field.name
+                )
             )
-
-    def _check_field_naming_conflicts(self):
-        if self.attributes & self.relationships:
-            raise exceptions.FieldNamingConflict(
-                'A resource cannot have an attribute and a relationship with '
-                'the same name.'
-            )
-
-    @property
-    def fields(self):
-        return self.attributes | self.relationships
-
-    def get_related_resource(self, relationship):
-        related_model_class = self.store.get_related_model_class(
-            self.model_class,
-            relationship
-        )
-        return self._registry.by_model_class[related_model_class]
+        self.fields[field.name] = field
 
     def register(self, registry):
         if self._registry is not None:
@@ -74,3 +44,56 @@ class Resource(object):
 
     def __repr__(self):
         return '<Resource {type}>'.format(type=self.type)
+
+
+class Field(object):
+    def __init__(self, parent_resource, name):
+        self.parent_resource = parent_resource
+        self.name = name
+        self._check_name()
+
+    def _check_name(self):
+        if self.name in {'id', 'type'}:
+            raise exceptions.FieldNamingConflict(
+                "A resource cannot have an attribute or a relationship named "
+                "'type' or 'id'."
+            )
+
+    def __repr__(self):
+        return '<{cls} name={name!r}>'.format(
+            cls=self.__class__.__name__,
+            name=self.name
+        )
+
+
+class Attribute(Field):
+    pass
+
+
+class Relationship(Field):
+    def __init__(
+        self, parent_resource, name, allow_include=True,
+        allow_full_replacement=False
+    ):
+        super(Relationship, self).__init__(parent_resource, name)
+        self.many = self.parent_resource.store.is_to_many_relationship(
+            self.parent_resource.model_class,
+            self.name
+        )
+        self.allow_include = allow_include
+        self.allow_full_replacement = allow_full_replacement
+
+    @property
+    def model_class(self):
+        return self.parent_resource.store.get_related_model_class(
+            self.parent_resource.model_class,
+            self.name
+        )
+
+    @property
+    def resource(self):
+        return self.parent_resource._registry.by_model_class[self.model_class]
+
+    @property
+    def type(self):
+        return self.resource.type

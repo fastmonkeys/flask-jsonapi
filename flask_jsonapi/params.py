@@ -65,7 +65,7 @@ class FieldsParameter(object):
         try:
             return set(self.requested[type])
         except KeyError:
-            return self._resource_registry.by_type[type].fields
+            return set(self._resource_registry.by_type[type].fields)
 
     def __repr__(self):
         return '<FieldsParameter {!r}>'.format(self.requested)
@@ -98,9 +98,11 @@ class IncludeParameter(object):
         for name in path:
             if name not in current_node:
                 current_node[name] = {}
-            if name not in resource.relationships:
+            try:
+                relationship = resource.relationships[name]
+            except KeyError:
                 raise errors.InvalidInclude(resource.type, name)
-            resource = resource.get_related_resource(name)
+            resource = relationship.resource
             current_node = current_node[name]
 
     def __repr__(self):

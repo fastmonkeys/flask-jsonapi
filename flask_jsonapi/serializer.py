@@ -72,15 +72,16 @@ class Serializer(object):
         return self.resource_registry.by_model_class[model.__class__]
 
     def _dump_attributes_object(self, resource, model):
-        attributes = self.params.fields[resource.type] & resource.attributes
+        fields = self.params.fields[resource.type]
+        attributes = fields & set(resource.attributes)
         return {
             attr: resource.store.get_attribute(model, attr)
             for attr in attributes
         }
 
     def _dump_relationships_object(self, resource, model):
-        all_fields = self.params.fields[resource.type]
-        relationships = all_fields & resource.relationships
+        fields = self.params.fields[resource.type]
+        relationships = fields & set(resource.relationships)
         return {
             relationship: self._dump_relationship_object(model, relationship)
             for relationship in relationships

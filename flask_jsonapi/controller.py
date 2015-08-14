@@ -25,8 +25,11 @@ class Controller(object):
 
     def fetch_related(self, type, id, relation):
         resource = self._get_resource(type)
-        related_resource = self._get_related_resource(resource, relation)
-        params = self._build_params(related_resource.type)
+        try:
+            relationship = resource.relationships[relation]
+        except KeyError:
+            raise errors.RelationshipNotFound(resource.type, relation)
+        params = self._build_params(relationship.type)
         instance = self._fetch_object(resource, id)
         related = resource.store.fetch_related(instance, relation, params)
         return self._serialize(related, params)
@@ -84,20 +87,20 @@ class Controller(object):
 
     def _parse_relationships(self, resource, relationships):
         return {
-            relationship: self._parse_relationship(
+            relationship_name: self._parse_relationship(
                 resource=resource,
-                relationship=relationship,
+                relationship_name=relationship_name,
                 data=value['data']
             )
-            for relationship, value in relationships.items()
+            for relationship_name, value in relationships.items()
         }
 
-    def _parse_relationship(self, resource, relationship, data):
-        related_resource = resource.get_related_resource(relationship)
-        if relationship in resource.to_one_relationships:
-            return self._parse_linkage(related_resource, linkage=data)
+    def _parse_relationship(self, resource, relationship_name, data):
+        relationship = resource.relationships[relationship_name]
+        if relationship.many:
+            return self._parse_linkages(relationship.resource, linkages=data)
         else:
-            return self._parse_linkages(related_resource, linkages=data)
+            return self._parse_linkage(relationship.resource, linkage=data)
 
     def _parse_linkage(self, related_resource, linkage):
         if linkage is not None:
@@ -136,12 +139,6 @@ class Controller(object):
             return self.resource_registry.by_type[type]
         except KeyError:
             raise errors.InvalidResource(type)
-
-    def _get_related_resource(self, resource, relation):
-        try:
-            return resource.get_related_resource(relation)
-        except exceptions.InvalidRelationship:
-            raise errors.RelationshipNotFound(resource.type, relation)
 
     def _build_params(self, type):
         return Parameters(

@@ -159,51 +159,63 @@ def models(db):
 
 @pytest.fixture
 def resources(jsonapi, db, models):
-    jsonapi.resources.register(
-        Resource(
-            type='series',
-            model_class=models.Series,
-            store=SQLAlchemyStore(db.session),
-            attributes=('title',)
-        )
+    series = Resource(
+        type='series',
+        model_class=models.Series,
+        store=SQLAlchemyStore(db.session),
     )
-    jsonapi.resources.register(
-        Resource(
-            type='authors',
-            model_class=models.Author,
-            store=SQLAlchemyStore(db.session),
-            attributes=('name', 'date_of_birth', 'date_of_death'),
-            relationships=('books',),
-            allow_client_generated_ids=True
-        )
+    series.add_attribute('title')
+
+    authors = Resource(
+        type='authors',
+        model_class=models.Author,
+        store=SQLAlchemyStore(db.session),
     )
-    jsonapi.resources.register(
-        Resource(
-            type='books',
-            model_class=models.Book,
-            store=SQLAlchemyStore(db.session),
-            attributes=('date_published', 'title'),
-            relationships=('author', 'chapters', 'series', 'stores')
-        )
+    authors.allow_client_generated_ids = True
+    authors.add_attribute('name')
+    authors.add_attribute('date_of_birth')
+    authors.add_attribute('date_of_death')
+    authors.add_relationship('books')
+
+    books = Resource(
+        type='books',
+        model_class=models.Book,
+        store=SQLAlchemyStore(db.session),
     )
-    jsonapi.resources.register(
-        Resource(
-            type='chapters',
-            model_class=models.Chapter,
-            store=SQLAlchemyStore(db.session),
-            attributes=('title', 'ordering'),
-            relationships=('book',)
-        )
+    books.add_attribute('date_published')
+    books.add_attribute('title')
+    books.add_relationship('author')
+    books.add_relationship(
+        'chapters',
+        allow_include=True,
+        allow_full_replacement=True
     )
-    jsonapi.resources.register(
-        Resource(
-            type='stores',
-            model_class=models.Store,
-            store=SQLAlchemyStore(db.session),
-            attributes=('name',),
-            relationships=('books',)
-        )
+    books.add_relationship('series')
+    books.add_relationship('stores')
+
+    chapters = Resource(
+        type='chapters',
+        model_class=models.Chapter,
+        store=SQLAlchemyStore(db.session),
     )
+    chapters.add_attribute('title')
+    chapters.add_attribute('ordering')
+    chapters.add_relationship('book')
+
+    stores = Resource(
+        type='stores',
+        model_class=models.Store,
+        store=SQLAlchemyStore(db.session),
+    )
+    stores.add_attribute('name')
+    stores.add_relationship('books')
+
+    jsonapi.resources.register(series)
+    jsonapi.resources.register(authors)
+    jsonapi.resources.register(books)
+    jsonapi.resources.register(chapters)
+    jsonapi.resources.register(stores)
+
     return jsonapi.resources
 
 

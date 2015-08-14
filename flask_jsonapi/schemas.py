@@ -62,18 +62,21 @@ def _get_relationships_definition(resource):
     return {
         "type": "object",
         "properties": {
-            relationship: _get_relationship_definition(resource, relationship)
-            for relationship in resource.relationships
+            relationship.name: _get_relationship_definition(
+                resource,
+                relationship
+            )
+            for relationship in resource.relationships.values()
         },
         "additionalProperties": False
     }
 
 
 def _get_relationship_definition(resource, relationship):
-    if relationship in resource.to_one_relationships:
-        ref = "#/definitions/relationshipToOne"
-    else:
+    if relationship.many:
         ref = "#/definitions/relationshipToMany"
+    else:
+        ref = "#/definitions/relationshipToOne"
     return {
         "type": "object",
         "required": ["data"],
