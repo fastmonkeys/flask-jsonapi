@@ -46,9 +46,19 @@ class Controller(object):
         except exceptions.ObjectAlreadyExists:
             raise errors.ResourceAlreadyExists(type=type, id=id)
         return current_app.response_class(
-            response=self._serialize(obj, params),
+            response=self._serialize(instance, params),
             status=201
         )
+
+    def delete(self, type, id):
+        resource = self._get_resource(type)
+        try:
+            instance = resource.store.fetch_one(resource.model_class, id)
+        except exceptions.ObjectNotFound:
+            pass
+        else:
+            resource.store.delete(instance)
+        return current_app.response_class(response='', status=204)
 
     def _parse_fields(self, resource, payload):
         data = payload['data']

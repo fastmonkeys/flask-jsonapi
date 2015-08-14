@@ -92,7 +92,7 @@ class TestSuccessfulRequest(object):
         assert attributes['date_published'] == '1983-10-28'
 
 
-class TestRequestInvalidResource(object):
+class TestInvalidResourceType(object):
     @pytest.fixture
     def response(self, client):
         return client.post('/foobars')

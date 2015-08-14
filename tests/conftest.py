@@ -128,12 +128,20 @@ def models(db):
     class Chapter(db.Model):
         __tablename__ = 'chapters'
         id = db.Column(db.Integer, primary_key=True)
-        book_id = db.Column(db.Integer, db.ForeignKey(Book.id), nullable=False)
+        book_id = db.Column(
+            db.Integer,
+            db.ForeignKey(Book.id, ondelete='CASCADE'),
+            nullable=False,
+        )
         title = db.Column(db.Text, nullable=False)
         ordering = db.Column(db.Integer, nullable=False)
         book = db.relationship(
             Book,
-            backref=db.backref('chapters', order_by=ordering)
+            backref=db.backref(
+                'chapters',
+                order_by=ordering,
+                passive_deletes=True
+            )
         )
 
     class Store(db.Model):

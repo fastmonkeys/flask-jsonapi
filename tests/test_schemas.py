@@ -1,7 +1,7 @@
 import jsonschema
 import pytest
 
-from flask_jsonapi import errors, schemas
+from flask_jsonapi import schemas
 
 
 class TestCreateRequestValidation(object):

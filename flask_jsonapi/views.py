@@ -48,6 +48,11 @@ def create(type):
     return controller.create(type)
 
 
+@blueprint.route('/<type>/<id>', methods=['DELETE'])
+def delete(type, id):
+    return controller.delete(type, id)
+
+
 @blueprint.route('/<type>/<id>', methods=['PATCH'])
 def update(type, id):
     pass
