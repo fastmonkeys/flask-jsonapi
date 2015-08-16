@@ -6,11 +6,24 @@ from .views import blueprint
 
 
 class JSONAPI(object):
-    def __init__(self, app=None, url_prefix=''):
+    def __init__(
+        self,
+        app=None,
+        resource_registry=None,
+        controller=None,
+        url_prefix=''
+    ):
         self.app = app
-        self.resources = ResourceRegistry()
+        if resource_registry is None:
+            self.resources = ResourceRegistry()
+        else:
+            self.resources = resource_registry
         self.url_prefix = url_prefix
-        self.controller = Controller(self.resources)
+
+        if controller is None:
+            self.controller = Controller(self.resources)
+        else:
+            self.controller = controller
         if app is not None:
             self.init_app(app)
 
