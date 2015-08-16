@@ -159,7 +159,7 @@ class Controller(object):
 class PostgreSQLController(Controller):
     def __init__(self, resource_registry):
         if QueryBuilder is None:
-            raise ImproperlyConfigured(
+            raise ImportError(
                 'PostgreSQLController needs SQLAlchemy-JSON-API installed.'
             )
         self.resource_registry = resource_registry
@@ -231,7 +231,3 @@ class PostgreSQLController(Controller):
             )
         )
         return resource.store.session.execute(query).scalar()
-
-
-class ImproperlyConfigured(Exception):
-    pass
