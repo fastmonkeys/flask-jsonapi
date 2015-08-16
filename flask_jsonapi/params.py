@@ -67,6 +67,9 @@ class FieldsParameter(object):
         except KeyError:
             return set(self._resource_registry.by_type[type].fields)
 
+    def __iter__(self):
+        return iter(self.requested.keys())
+
     def __repr__(self):
         return '<FieldsParameter {!r}>'.format(self.requested)
 

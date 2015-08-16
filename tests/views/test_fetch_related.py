@@ -130,7 +130,7 @@ class TestRequestInvalidResource(object):
 class TestResourceNotFound(object):
     @pytest.fixture
     def response(self, client):
-        return client.get('/books/123123')
+        return client.get('/books/123123/chapters')
 
     def test_responds_with_404_status_code(self, response):
         assert response.status_code == 404

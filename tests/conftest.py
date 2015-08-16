@@ -8,7 +8,8 @@ from flask import Flask, Response
 from flask.json import JSONEncoder as _JSONEncoder
 from flask_sqlalchemy import SQLAlchemy
 
-from flask_jsonapi import JSONAPI
+from flask_jsonapi import JSONAPI, ResourceRegistry
+from flask_jsonapi.controller import PostgreSQLController
 from flask_jsonapi.resource import Resource
 from flask_jsonapi.store.sqlalchemy import SQLAlchemyStore
 
@@ -38,7 +39,9 @@ class JSONEncoder(_JSONEncoder):
 def app():
     app = Flask(__name__)
     app.config['SERVER_NAME'] = 'example.com'
-    app.config['SQLALCHEMY_ENGINE'] = 'sqlite://'
+    app.config['SQLALCHEMY_DATABASE_URI'] = (
+        'postgres://postgres@localhost/flask_json_api'
+    )
     app.config['TESTING'] = True
     app.response_class = JSONResponse
     app.json_encoder = JSONEncoder
@@ -51,9 +54,17 @@ def db(app):
     return SQLAlchemy(app)
 
 
-@pytest.fixture
-def jsonapi(app):
-    return JSONAPI(app)
+@pytest.fixture(params=['default', 'postgresql'])
+def jsonapi(app, request):
+    if request.param == 'default':
+        return JSONAPI(app)
+    else:
+        registry = ResourceRegistry()
+        return JSONAPI(
+            app,
+            resource_registry=registry,
+            controller=PostgreSQLController(registry)
+        )
 
 
 @pytest.fixture
@@ -62,7 +73,16 @@ def fantasy_database(db, models):
         data = json.loads(f.read())
 
     connection = db.engine.connect()
-    for table_name, rows in data.items():
+    table_names = [
+        'stores',
+        'authors',
+        'series',
+        'books',
+        'chapters',
+        'books_stores'
+    ]
+    for table_name in table_names:
+        rows = data[table_name]
         table = db.metadata.tables[table_name]
 
         for row in rows:
@@ -154,7 +174,18 @@ def models(db):
 
     yield Bunch(db.Model._decl_class_registry)
 
-    db.drop_all()
+    table_names = [
+        'stores',
+        'authors',
+        'series',
+        'books',
+        'chapters',
+        'books_stores'
+    ]
+    for table_name in reversed(table_names):
+        db.session.execute('DROP TABLE {0} CASCADE'.format(table_name))
+    db.session.commit()
+    # db.drop_all()
 
 
 @pytest.fixture
