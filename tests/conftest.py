@@ -222,7 +222,7 @@ def resources(jsonapi, db, models):
         allow_full_replacement=True
     )
     books.add_relationship('series')
-    books.add_relationship('stores')
+    books.add_relationship('stores', allow_full_replacement=True)
 
     chapters = Resource(
         type='chapters',

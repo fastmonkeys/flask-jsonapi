@@ -43,12 +43,13 @@ class Controller(object):
         params = self._build_params(type)
         payload = self._get_json()
         self._validate_create_request(resource, payload)
-        id = payload['data'].get('id')
+        data = payload['data']
+        id = data.get('id')
         try:
             instance = resource.store.create(
                 model_class=resource.model_class,
                 id=id,
-                fields=self._parse_fields(resource, payload)
+                fields=self._parse_fields(resource, data)
             )
         except exceptions.ObjectAlreadyExists:
             raise errors.ResourceAlreadyExists(type=type, id=id)
@@ -56,6 +57,21 @@ class Controller(object):
             response=self._serialize(instance, params),
             status=201
         )
+
+    def update(self, type, id):
+        resource = self._get_resource(type)
+        params = self._build_params(type)
+        instance = self._fetch_object(resource, id)
+        payload = self._get_json()
+        self._validate_update_request(resource, id, payload)
+        resource.store.update(
+            instance=instance,
+            fields=self._parse_fields(
+                resource=resource,
+                data=payload['data']
+            )
+        )
+        return self._serialize(instance, params)
 
     def delete(self, type, id):
         resource = self._get_resource(type)
@@ -67,8 +83,7 @@ class Controller(object):
             resource.store.delete(instance)
         return current_app.response_class(response='', status=204)
 
-    def _parse_fields(self, resource, payload):
-        data = payload['data']
+    def _parse_fields(self, resource, data):
         fields = {}
         fields.update(data.get('attributes', {}))
         fields.update(
@@ -89,6 +104,15 @@ class Controller(object):
         if 'id' in data and not resource.allow_client_generated_ids:
             raise errors.ClientGeneratedIDsUnsupported(type_)
 
+    def _validate_update_request(self, resource, id, payload):
+        schema = schemas.get_update_request_schema(resource)
+        self._validate(payload, schema)
+        data = payload['data']
+        if data['type'] != resource.type:
+            raise errors.TypeMismatch(data['type'])
+        if data['id'] != id:
+            raise errors.IDMismatch(data['id'])
+
     def _parse_relationships(self, resource, relationships):
         return {
             relationship_name: self._parse_relationship(
@@ -101,23 +125,31 @@ class Controller(object):
 
     def _parse_relationship(self, resource, relationship_name, data):
         relationship = resource.relationships[relationship_name]
+        path = ['data', 'relationships', relationship.name, 'data']
         if relationship.many:
-            return self._parse_linkages(relationship.resource, linkages=data)
+            if not relationship.allow_full_replacement:
+                raise errors.FullReplacementDisallowed(relationship_name)
+            return self._parse_linkages(
+                relationship,
+                linkages=data,
+                path=path
+            )
         else:
-            return self._parse_linkage(relationship.resource, linkage=data)
+            return self._parse_linkage(relationship, linkage=data, path=path)
 
-    def _parse_linkage(self, related_resource, linkage):
+    def _parse_linkage(self, relationship, linkage, path):
         if linkage is not None:
-            assert linkage['type'] == related_resource.type
-            return related_resource.store.fetch_one(
-                model_class=related_resource.model_class,
-                id=linkage['id']
+            assert linkage['type'] == relationship.type
+            return self._fetch_object(
+                resource=relationship.resource,
+                id=linkage['id'],
+                path=path
             )
 
-    def _parse_linkages(self, related_resource, linkages):
+    def _parse_linkages(self, relationship, linkages, path):
         return [
-            self._parse_linkage(related_resource, linkage)
-            for linkage in linkages
+            self._parse_linkage(relationship, linkage, path + [i])
+            for i, linkage in enumerate(linkages)
         ]
 
     def _validate(self, payload, schema):
@@ -132,11 +164,11 @@ class Controller(object):
             raise errors.InvalidJSON
         return json
 
-    def _fetch_object(self, resource, id, params=None):
+    def _fetch_object(self, resource, id, params=None, path=None):
         try:
             return resource.store.fetch_one(resource.model_class, id, params)
         except exceptions.ObjectNotFound:
-            raise errors.ResourceNotFound(id)
+            raise errors.ResourceNotFound(type=resource.type, id=id, path=path)
 
     def _get_resource(self, type):
         try:

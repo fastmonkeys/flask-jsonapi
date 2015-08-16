@@ -1,4 +1,4 @@
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify
 from werkzeug.exceptions import BadRequest
 from werkzeug.local import LocalProxy
 
@@ -55,7 +55,7 @@ def delete(type, id):
 
 @blueprint.route('/<type>/<id>', methods=['PATCH'])
 def update(type, id):
-    pass
+    return controller.update(type, id)
 
 
 @blueprint.route('/<type>/<id>/relationships/<relation>', methods=['PATCH'])

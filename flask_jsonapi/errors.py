@@ -1,3 +1,4 @@
+from jsonpointer import JsonPointer
 from werkzeug.exceptions import BadRequest, Conflict, Forbidden, NotFound
 
 from . import error_codes
@@ -34,10 +35,55 @@ class TypeMismatch(Error):
                 "status": Conflict.code,
                 "title": "Type mismatch",
                 "detail": (
-                    "{type} is not a valid type for this operation."
+                    "{type} does not match the endpoint type."
                 ).format(type=self.type),
                 "source": {
                     "pointer": '/data/type'
+                }
+            }
+        ]
+
+
+class IDMismatch(Error):
+    def __init__(self, id):
+        self.id = id
+
+    @property
+    def errors(self):
+        return [
+            {
+                "code": error_codes.ID_MISMATCH,
+                "status": Conflict.code,
+                "title": "ID mismatch",
+                "detail": "{id} does not match the endpoint id.".format(
+                    id=self.id
+                ),
+                "source": {
+                    "pointer": '/data/id'
+                }
+            }
+        ]
+
+
+class FullReplacementDisallowed(Error):
+    def __init__(self, relationship):
+        self.relationship = relationship
+
+    @property
+    def errors(self):
+        return [
+            {
+                "code": error_codes.FULL_REPLACEMENT_DISALLOWED,
+                "status": Forbidden.code,
+                "title": "Full replacement disallowed",
+                "detail": (
+                    "Full replacement of {relationship} is not "
+                    "allowed."
+                ).format(relationship=self.relationship),
+                "source": {
+                    "pointer": '/data/relationships/{relationship}'.format(
+                        relationship=self.relationship
+                    )
                 }
             }
         ]
@@ -57,7 +103,7 @@ class ValidationError(Error):
                 "title": "Validation error",
                 "detail": self.detail,
                 "source": {
-                    "pointer": '/' + '/'.join(self.path)
+                    "pointer": JsonPointer.from_parts(self.path or ['']).path
                 }
             }
         ]
@@ -104,22 +150,27 @@ class RelationshipNotFound(Error):
 
 
 class ResourceNotFound(Error):
-    def __init__(self, id):
+    def __init__(self, type, id, path=None):
+        self.type = type
         self.id = id
+        self.path = path
 
     @property
     def errors(self):
-        return [
-            {
-                "code": error_codes.RESOURCE_NOT_FOUND,
-                "status": NotFound.code,
-                "title": "Resource not found",
-                "detail": (
-                    "The resource identified by {id} could not be "
-                    "found.".format(id=self.id)
-                )
+        error = {
+            "code": error_codes.RESOURCE_NOT_FOUND,
+            "status": NotFound.code,
+            "title": "Resource not found",
+            "detail": (
+                "The resource identified by ({type}, {id}) type-id pair "
+                "could not be found."
+            ).format(type=self.type, id=self.id)
+        }
+        if self.path is not None:
+            error['source'] = {
+                'pointer': JsonPointer.from_parts(self.path or ['']).path
             }
-        ]
+        return [error]
 
 
 class FieldTypeMissing(Error):
@@ -404,7 +455,8 @@ class ResourceAlreadyExists(Error):
                 "code": error_codes.RESOURCE_ALREADY_EXISTS,
                 "title": "Resource already exists",
                 "detail": (
-                    "A resource of type {type} and id {id} already exists."
+                    "A resource with ({type}, {id}) type-id pair already "
+                    "exists."
                 ).format(type=self.type, id=self.id),
                 "source": {
                     "pointer": "/data/id"

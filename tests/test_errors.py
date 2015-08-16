@@ -16,13 +16,16 @@ class TestInvalidResource(object):
 
 class TestResourceNotFound(object):
     def test_errors(self):
-        e = errors.ResourceNotFound('123')
+        e = errors.ResourceNotFound(type='books', id='123')
         assert e.errors == [
             {
                 "code": 'RESOURCE_NOT_FOUND',
                 "status": 404,
                 "title": "Resource not found",
-                "detail": "The resource identified by 123 could not be found."
+                "detail": (
+                    "The resource identified by (books, 123) type-id pair "
+                    "could not be found."
+                )
             }
         ]
 

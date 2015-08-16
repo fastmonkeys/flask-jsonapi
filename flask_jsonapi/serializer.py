@@ -1,7 +1,5 @@
 import itertools
 
-from flask import url_for
-
 
 class Serializer(object):
     def __init__(self, resource_registry, params, base_url=''):
@@ -87,13 +85,11 @@ class Serializer(object):
             for relationship in relationships
         }
 
-    def _dump_relationship_object(self, model, relationship):
+    def _dump_relationship_object(self, model, relationship_name):
         resource = self._get_resource(model)
-        related = resource.store.get_related(model, relationship)
-        if resource.store.is_to_many_relationship(
-            model.__class__,
-            relationship
-        ):
+        relationship = resource.relationships[relationship_name]
+        related = resource.store.get_related(model, relationship_name)
+        if relationship.many:
             data = [self._dump_resource_identifier(m) for m in related]
         else:
             data = self._dump_resource_identifier(related)
@@ -102,12 +98,12 @@ class Serializer(object):
                 "self": self._get_relationship_url(
                     type=resource.type,
                     id=resource.store.get_id(model),
-                    relation=relationship
+                    relation=relationship.name
                 ),
                 "related": self._get_related_url(
                     type=resource.type,
                     id=resource.store.get_id(model),
-                    relation=relationship
+                    relation=relationship.name
                 ),
             },
             "data": data
@@ -129,26 +125,24 @@ class Serializer(object):
     def _iter_included_models(self, model, include):
         resource = self._get_resource(model)
         store = resource.store
-        for relationship in include:
-            if store.is_to_many_relationship(
-                model.__class__,
-                relationship
-            ):
-                related_models = store.get_related(model, relationship)
+        for relationship_name in include:
+            relationship = resource.relationships[relationship_name]
+            if relationship.many:
+                related_models = store.get_related(model, relationship.name)
                 for related_model in related_models:
                     yield related_model
                     for m in self._iter_included_models(
                         related_model,
-                        include[relationship]
+                        include[relationship.name]
                     ):
                         yield m
             else:
-                related_model = store.get_related(model, relationship)
+                related_model = store.get_related(model, relationship.name)
                 if related_model is not None:
                     yield related_model
                     for m in self._iter_included_models(
                         related_model,
-                        include[relationship]
+                        include[relationship.name]
                     ):
                         yield m
 

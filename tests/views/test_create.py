@@ -3,16 +3,6 @@ import json
 import pytest
 
 
-# Responses
-# =========
-#
-#
-# 403 Forbidden
-# -------------
-#
-# A server MAY return 403 Forbidden in response to an unsupported request to create a resource.
-#
-
 @pytest.fixture
 def data(fantasy_database):
     return {
@@ -146,9 +136,7 @@ class TestConflictingType(object):
     def test_returns_type_mismatch_error(self, response):
         error = response.json['errors'][0]
         assert error['code'] == 'TYPE_MISMATCH'
-        assert error['detail'] == (
-            'authors is not a valid type for this operation.'
-        )
+        assert error['detail'] == "authors does not match the endpoint type."
         assert error['source'] == {'pointer': '/data/type'}
 
 
@@ -221,6 +209,6 @@ class TestConflictWhenUsingClientGeneratedID(object):
         error = response.json['errors'][0]
         assert error['code'] == 'RESOURCE_ALREADY_EXISTS'
         assert error['detail'] == (
-            'A resource of type authors and id 1 already exists.'
+            'A resource with (authors, 1) type-id pair already exists.'
         )
         assert error['source'] == {'pointer': '/data/id'}

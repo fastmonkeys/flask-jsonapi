@@ -1,7 +1,5 @@
 from __future__ import absolute_import
 
-import contextlib
-
 import sqlalchemy
 from sqlalchemy import orm
 
@@ -96,6 +94,11 @@ class SQLAlchemyStore(Store):
         self.session.add(instance)
         self.session.commit()
         return instance
+
+    def update(self, instance, fields):
+        for name, value in fields.items():
+            setattr(instance, name, value)
+        self.session.commit()
 
     def _exists(self, model_class, id):
         query = self.session.query(model_class).filter_by(id=id)

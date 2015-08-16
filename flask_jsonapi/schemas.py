@@ -1,3 +1,9 @@
+def get_update_request_schema(resource):
+    schema = get_create_request_schema(resource)
+    schema['definitions']['resource']['required'].append('id')
+    return schema
+
+
 def get_create_request_schema(resource):
     return {
         "definitions": {
