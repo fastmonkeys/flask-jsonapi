@@ -91,6 +91,13 @@ def fantasy_database(db, models):
                     row[column] = datetime.strptime(value, '%Y-%m-%d').date()
 
         connection.execute(table.insert(), rows)
+        if table_name != 'books_stores':
+            connection.execute(
+                'ALTER SEQUENCE {table}_id_seq RESTART WITH {num_rows}'.format(
+                    table=table_name,
+                    num_rows=(len(rows) + 1)
+                )
+            )
 
 
 @pytest.yield_fixture

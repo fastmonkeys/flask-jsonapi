@@ -14,7 +14,7 @@ class TestSuccessfulRequest(object):
         assert delete_response.status_code == 204
 
     def test_responds_with_empty_body(self, delete_response):
-        assert delete_response.data == ''
+        assert delete_response.data == b''
 
     def test_deletes_the_resource(self, fetch_response):
         assert fetch_response.status_code == 404

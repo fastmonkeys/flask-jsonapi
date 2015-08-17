@@ -210,9 +210,9 @@ class PostgreSQLController(Controller):
             params.pagination
         )
 
-    def fetch_one(self, type, id, params):
+    def fetch_one(self, type, id):
         resource = self._get_resource(type)
-        params = self._build_params(type, params)
+        params = self._build_params(type)
         include = params.include.raw
         query = self.query_builder.select_one(
             resource.model_class,
@@ -227,9 +227,9 @@ class PostgreSQLController(Controller):
             raise errors.ResourceNotFound(id)
         return result
 
-    def fetch(self, type, params):
+    def fetch(self, type):
         resource = self._get_resource(type)
-        params = self._build_params(type, params)
+        params = self._build_params(type)
         include = params.include.raw
         query = self.query_builder.select(
             resource.model_class,
@@ -240,10 +240,13 @@ class PostgreSQLController(Controller):
         )
         return resource.store.session.execute(query).scalar()
 
-    def fetch_related(self, type, id, relation, params):
+    def fetch_related(self, type, id, relation):
         resource = self._get_resource(type)
-        related_resource = self._get_related_resource(resource, relation)
-        params = self._build_params(related_resource.type, params)
+        try:
+            related_resource = resource.relationships[relation]
+        except KeyError:
+            raise errors.RelationshipNotFound(resource.type, relation)
+        params = self._build_params(related_resource.type)
         relationship = resource.store._get_relationship_property(
             resource.model_class,
             relation
