@@ -224,7 +224,7 @@ class PostgreSQLController(Controller):
         )
         result = resource.store.session.execute(query).scalar()
         if result == '{"data":null}':
-            raise errors.ResourceNotFound(id)
+            raise errors.ResourceNotFound(type, id)
         return result
 
     def fetch(self, type):
