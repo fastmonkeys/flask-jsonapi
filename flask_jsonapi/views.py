@@ -40,7 +40,7 @@ def fetch_related(type, id, relation):
 
 @blueprint.route('/<type>/<id>/relationships/<relation>', methods=['GET'])
 def fetch_relationship(type, id, relation):
-    pass
+    return controller.fetch_relationship(type, id, relation)
 
 
 @blueprint.route('/<type>', methods=['POST'])

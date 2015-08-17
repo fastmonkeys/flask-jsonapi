@@ -17,6 +17,14 @@ class Serializer(object):
             document['included'] = included
         return document
 
+    def dump_relationship(self, input_):
+        many = isinstance(input_, list)
+        if many:
+            data = [self._dump_resource_identifier(m) for m in input_]
+        else:
+            data = self._dump_resource_identifier(input_)
+        return {'data': data}
+
     def _dump_primary_data(self, input_, many):
         if many:
             return [self._dump_resource_object(model) for model in input_]

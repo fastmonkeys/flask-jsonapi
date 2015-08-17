@@ -38,6 +38,17 @@ class Controller(object):
         related = resource.store.fetch_related(instance, relation, params)
         return self._serialize(related, params)
 
+    def fetch_relationship(self, type, id, relation):
+        resource = self._get_resource(type)
+        try:
+            relationship = resource.relationships[relation]
+        except KeyError:
+            raise errors.RelationshipNotFound(resource.type, relation)
+        params = self._build_params(relationship.type)
+        instance = self._fetch_object(resource, id)
+        related = resource.store.fetch_related(instance, relation, params)
+        return self._serialize_relationship(related, params)
+
     def create(self, type):
         resource = self._get_resource(type)
         params = self._build_params(type)
@@ -186,6 +197,10 @@ class Controller(object):
     def _serialize(self, input, params):
         serializer = Serializer(self.resource_registry, params)
         return json.dumps(serializer.dump(input))
+
+    def _serialize_relationship(self, input, params):
+        serializer = Serializer(self.resource_registry, params)
+        return json.dumps(serializer.dump_relationship(input))
 
 
 class PostgreSQLController(Controller):
