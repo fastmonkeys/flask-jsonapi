@@ -6,8 +6,8 @@ from flask_jsonapi import schemas
 
 class TestCreateRequestValidation(object):
     @pytest.fixture
-    def resource(self, resources):
-        return resources.by_type['books']
+    def resource(self, resource_registry):
+        return resource_registry.by_type['books']
 
     @pytest.fixture
     def schema(self, resource):

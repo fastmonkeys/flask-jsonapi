@@ -21,14 +21,14 @@ def author(db, models, fantasy_database):
     return db.session.query(models.Author).filter_by(id=1).one()
 
 
-def test_single_resource(jsonapi, resources, book, db):
+def test_single_resource(resource_registry, book, db):
     params = Parameters(
-        resource_registry=jsonapi.resources,
+        resource_registry=resource_registry,
         type='books',
         params={}
     )
     serializer = Serializer(
-        resource_registry=jsonapi.resources,
+        resource_registry=resource_registry,
         params=params,
         base_url='/api'
     )
@@ -102,14 +102,14 @@ def test_single_resource(jsonapi, resources, book, db):
     }
 
 
-def test_single_resource(jsonapi, resources, db):
+def test_single_resource(resource_registry, db):
     params = Parameters(
-        resource_registry=jsonapi.resources,
+        resource_registry=resource_registry,
         type='books',
         params={}
     )
     serializer = Serializer(
-        resource_registry=jsonapi.resources,
+        resource_registry=resource_registry,
         params=params,
         base_url='/api'
     )
@@ -119,16 +119,16 @@ def test_single_resource(jsonapi, resources, db):
     }
 
 
-def test_sparse_fieldsets(jsonapi, resources, book, db):
+def test_sparse_fieldsets(resource_registry, book, db):
     params = Parameters(
-        resource_registry=jsonapi.resources,
+        resource_registry=resource_registry,
         type='books',
         params={
             'fields': {'books': 'title,author'}
         }
     )
     serializer = Serializer(
-        resource_registry=jsonapi.resources,
+        resource_registry=resource_registry,
         params=params,
         base_url='/api'
     )
@@ -161,9 +161,9 @@ def test_sparse_fieldsets(jsonapi, resources, book, db):
     }
 
 
-def test_inclusion_of_related_resources(jsonapi, resources, author, db):
+def test_inclusion_of_related_resources(resource_registry, author, db):
     params = Parameters(
-        resource_registry=jsonapi.resources,
+        resource_registry=resource_registry,
         type='authors',
         params={
             'fields': {
@@ -175,7 +175,7 @@ def test_inclusion_of_related_resources(jsonapi, resources, author, db):
         }
     )
     serializer = Serializer(
-        resource_registry=jsonapi.resources,
+        resource_registry=resource_registry,
         params=params,
         base_url='/api'
     )
@@ -261,12 +261,12 @@ def test_inclusion_of_related_resources(jsonapi, resources, author, db):
     }
 
 
-def test_resource_collection(jsonapi, resources, books, db):
+def test_resource_collection(resource_registry, books, db):
     params = Parameters(
-        resource_registry=jsonapi.resources,
+        resource_registry=resource_registry,
         type='books',
         params={}
     )
-    serializer = Serializer(resource_registry=jsonapi.resources, params=params)
+    serializer = Serializer(resource_registry=resource_registry, params=params)
     data = serializer.dump(books)
     assert len(data['data']) == 11

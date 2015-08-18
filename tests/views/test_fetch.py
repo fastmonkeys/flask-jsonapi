@@ -15,7 +15,8 @@ class TestSuccessfulRequest(object):
 
 class TestSuccessfulRequestEmptyCollection(object):
     @pytest.fixture
-    def response(self, client):
+    def response(self, client, fantasy_database, models, db):
+        db.session.query(models.Book).delete()
         return client.get('/books')
 
     def test_responds_with_200_status_code(self, response):
