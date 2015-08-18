@@ -9,7 +9,6 @@ from flask.json import JSONEncoder as _JSONEncoder
 from flask_sqlalchemy import SQLAlchemy
 
 from flask_jsonapi import JSONAPI, ResourceRegistry
-from flask_jsonapi.controller import PostgreSQLController
 from flask_jsonapi.resource import Resource
 from flask_jsonapi.store.sqlalchemy import SQLAlchemyStore
 
@@ -118,15 +117,9 @@ def resource_registry(db, models):
     return resource_registry
 
 
-@pytest.fixture(params=['default', 'postgresql'])
-def controller(request, resource_registry):
-    if request.param == 'default':
-        return None
-    else:
-        try:
-            return PostgreSQLController(resource_registry)
-        except ImportError:
-            pytest.skip()
+@pytest.fixture
+def controller():
+    pass
 
 
 @pytest.fixture

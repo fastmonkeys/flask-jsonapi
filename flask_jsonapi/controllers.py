@@ -1,14 +1,15 @@
 import jsonschema
 import qstring
-from flask import current_app, json, request
-try:
-    from sqlalchemy_json_api import QueryBuilder
-except ImportError:
-    QueryBuilder = None
+from flask import abort, current_app, json, request
 
 from . import errors, exceptions, schemas
 from .params import Parameters
 from .serializer import Serializer
+
+try:
+    from sqlalchemy_json_api import QueryBuilder
+except ImportError:
+    QueryBuilder = None
 
 
 class Controller(object):

@@ -1,5 +1,15 @@
 import pytest
 
+from flask_jsonapi import controllers
+
+
+@pytest.fixture(params=['Controller', 'PostgreSQLController'])
+def controller(request, resource_registry):
+    try:
+        return getattr(controllers, request.param)(resource_registry)
+    except ImportError:
+        pytest.skip()
+
 
 class TestSuccessfulRequestToOneRelation(object):
     @pytest.fixture

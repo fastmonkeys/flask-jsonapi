@@ -1,6 +1,6 @@
 __version__ = '0.1.0 '
 
-from .controller import Controller
+from .controllers import Controller
 from .resource_registry import ResourceRegistry
 from .views import blueprint
 
