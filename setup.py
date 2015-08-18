@@ -1,7 +1,7 @@
 import os
 import re
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -24,9 +24,7 @@ setup(
     author='Janne Vanhala',
     author_email='janne@fastmonkeys.com',
     url='http://github.com/fastmonkeys/flask-jsonapi',
-    packages=[
-        'flask_jsonapi',
-    ],
+    packages=find_packages(),
     install_requires=[
         'Flask',
         'Flask-SQLAlchemy',
