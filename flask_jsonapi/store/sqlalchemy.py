@@ -108,20 +108,20 @@ class SQLAlchemyStore(Store):
         self.session.delete(instance)
         self.session.commit()
 
-    def set_attribute(self, instance, name, value):
-        setattr(instance, name, value)
+    def create_relationship(self, instance, relationship, values):
+        collection = getattr(instance, relationship)
+        for value in values:
+            collection.append(value)
+        self.session.commit()
 
-    def replace_to_one_relationship(self, instance, name, value):
-        setattr(instance, name, value)
-
-    def create_to_many_relationship(self, instance, name, value):
-        getattr(instance, name).append(value)
-
-    def replace_to_many_relationship(self, instance, name, values):
-        setattr(instance, name, values)
-
-    def remove_to_many_relationship(self, instance, name, value):
-        getattr(instance, name).remove(value)
+    def delete_relationship(self, instance, relationship, values):
+        collection = getattr(instance, relationship)
+        for value in values:
+            try:
+                collection.remove(value)
+            except ValueError:
+                pass
+        self.session.commit()
 
     def get_related_model_class(self, model_class, relationship):
         prop = self._get_relationship_property(model_class, relationship)

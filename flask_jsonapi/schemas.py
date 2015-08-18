@@ -4,6 +4,10 @@ def get_update_request_schema(resource):
     return schema
 
 
+def get_update_relationship_request_schema(relationship):
+    return _get_relationship_definition(relationship)
+
+
 def get_create_request_schema(resource):
     return {
         "definitions": {
@@ -18,32 +22,7 @@ def get_create_request_schema(resource):
                 }
             },
             "attributes": _get_attributes_definition(resource),
-            "relationships": _get_relationships_definition(resource),
-            "relationshipToOne": {
-                "type": ["null", "object"],
-                "required": [
-                    "type",
-                    "id"
-                ],
-                "properties": {
-                    "type": {"type": "string"},
-                    "id": {"type": "string"}
-                }
-            },
-            "relationshipToMany": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "required": [
-                        "type",
-                        "id"
-                    ],
-                    "properties": {
-                        "type": {"type": "string"},
-                        "id": {"type": "string"}
-                    }
-                }
-            }
+            "relationships": _get_relationships_definition(resource)
         },
         "type": "object",
         "required": ["data"],
@@ -68,25 +47,45 @@ def _get_relationships_definition(resource):
     return {
         "type": "object",
         "properties": {
-            relationship.name: _get_relationship_definition(
-                resource,
-                relationship
-            )
+            relationship.name: _get_relationship_definition(relationship)
             for relationship in resource.relationships.values()
         },
         "additionalProperties": False
     }
 
 
-def _get_relationship_definition(resource, relationship):
+def _get_relationship_definition(relationship):
     if relationship.many:
-        ref = "#/definitions/relationshipToMany"
+        definition = {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "type",
+                    "id"
+                ],
+                "properties": {
+                    "type": {"type": "string"},
+                    "id": {"type": "string"}
+                }
+            }
+        }
     else:
-        ref = "#/definitions/relationshipToOne"
+        definition = {
+            "type": ["null", "object"],
+            "required": [
+                "type",
+                "id"
+            ],
+            "properties": {
+                "type": {"type": "string"},
+                "id": {"type": "string"}
+            }
+        }
     return {
         "type": "object",
         "required": ["data"],
         "properties": {
-            "data": {"$ref": ref}
+            "data": definition
         }
     }

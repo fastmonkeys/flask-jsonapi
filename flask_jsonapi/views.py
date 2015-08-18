@@ -60,14 +60,14 @@ def update(type, id):
 
 @blueprint.route('/<type>/<id>/relationships/<relation>', methods=['PATCH'])
 def update_relationship(type, id, relation):
-    pass
+    return controller.update_relationship(type, id, relation)
 
 
 @blueprint.route('/<type>/<id>/relationships/<relation>', methods=['POST'])
-def add_to_relationship(type, id, relation):
-    pass
+def create_relationship(type, id, relation):
+    return controller.create_relationship(type, id, relation)
 
 
 @blueprint.route('/<type>/<id>/relationships/<relation>', methods=['DELETE'])
-def delete_from_relationship(type, id, relation):
-    pass
+def delete_relationship(type, id, relation):
+    return controller.delete_relationship(type, id, relation)

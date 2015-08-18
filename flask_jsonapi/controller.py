@@ -27,26 +27,20 @@ class Controller(object):
         instance = self._fetch_object(resource, id, params)
         return self._serialize(instance, params)
 
-    def fetch_related(self, type, id, relation):
+    def fetch_related(self, type, id, relationship):
         resource = self._get_resource(type)
-        try:
-            relationship = resource.relationships[relation]
-        except KeyError:
-            raise errors.RelationshipNotFound(resource.type, relation)
+        relationship = self._get_relationship(resource, relationship)
         params = self._build_params(relationship.type)
         instance = self._fetch_object(resource, id)
-        related = resource.store.fetch_related(instance, relation, params)
+        related = resource.store.fetch_related(instance, relationship.name, params)
         return self._serialize(related, params)
 
-    def fetch_relationship(self, type, id, relation):
+    def fetch_relationship(self, type, id, relationship):
         resource = self._get_resource(type)
-        try:
-            relationship = resource.relationships[relation]
-        except KeyError:
-            raise errors.RelationshipNotFound(resource.type, relation)
+        relationship = self._get_relationship(resource, relationship)
         params = self._build_params(relationship.type)
         instance = self._fetch_object(resource, id)
-        related = resource.store.fetch_related(instance, relation, params)
+        related = resource.store.fetch_related(instance, relationship.name, params)
         return self._serialize_relationship(related, params)
 
     def create(self, type):
@@ -94,13 +88,75 @@ class Controller(object):
             resource.store.delete(instance)
         return current_app.response_class(response='', status=204)
 
+    def create_relationship(self, type, id, relationship):
+        resource = self._get_resource(type)
+        relationship = self._get_relationship(resource, relationship)
+        instance = self._fetch_object(resource, id)
+        if not relationship.many:
+            abort(405)
+        payload = self._get_json()
+        self._validate_update_relationship_request(relationship, payload)
+        resource.store.create_relationship(
+            instance=instance,
+            relationship=relationship.name,
+            values=self._parse_relationship(
+                resource=resource,
+                relationship=relationship,
+                data=payload['data'],
+                path=['data']
+            )
+        )
+        return current_app.response_class(response='', status=204)
+
+    def update_relationship(self, type, id, relationship):
+        resource = self._get_resource(type)
+        relationship = self._get_relationship(resource, relationship)
+        instance = self._fetch_object(resource, id)
+        payload = self._get_json()
+        self._validate_update_relationship_request(relationship, payload)
+        self._check_full_replacement(relationship, path=None)
+        resource.store.update(
+            instance=instance,
+            fields={
+                relationship.name: self._parse_relationship(
+                    resource=resource,
+                    relationship=relationship,
+                    data=payload['data'],
+                    path=['data'],
+                )
+            }
+        )
+        return current_app.response_class(response='', status=204)
+
+    def delete_relationship(self, type, id, relationship):
+        resource = self._get_resource(type)
+        relationship = self._get_relationship(resource, relationship)
+        instance = self._fetch_object(resource, id)
+        if not relationship.many:
+            abort(405)
+        payload = self._get_json()
+        self._validate_update_relationship_request(relationship, payload)
+        resource.store.delete_relationship(
+            instance=instance,
+            relationship=relationship.name,
+            values=self._parse_relationship(
+                resource=resource,
+                relationship=relationship,
+                data=payload['data'],
+                path=['data'],
+                ignore_not_found=True
+            )
+        )
+        return current_app.response_class(response='', status=204)
+
     def _parse_fields(self, resource, data):
         fields = {}
         fields.update(data.get('attributes', {}))
         fields.update(
             self._parse_relationships(
                 resource=resource,
-                relationships=data.get('relationships', {})
+                relationships=data.get('relationships', {}),
+                path=['data', 'relationships']
             )
         )
         return fields
@@ -111,7 +167,7 @@ class Controller(object):
         data = payload['data']
         type_ = data['type']
         if type_ != resource.type:
-            raise errors.TypeMismatch(type_)
+            raise errors.TypeMismatch(type_, path=['data', 'type'])
         if 'id' in data and not resource.allow_client_generated_ids:
             raise errors.ClientGeneratedIDsUnsupported(type_)
 
@@ -120,48 +176,80 @@ class Controller(object):
         self._validate(payload, schema)
         data = payload['data']
         if data['type'] != resource.type:
-            raise errors.TypeMismatch(data['type'])
+            raise errors.TypeMismatch(data['type'], path=['data', 'type'])
         if data['id'] != id:
             raise errors.IDMismatch(data['id'])
 
-    def _parse_relationships(self, resource, relationships):
-        return {
-            relationship_name: self._parse_relationship(
-                resource=resource,
-                relationship_name=relationship_name,
-                data=value['data']
-            )
+    def _validate_update_relationship_request(self, relationship, payload):
+        schema = schemas.get_update_relationship_request_schema(relationship)
+        self._validate(payload, schema)
+
+    def _parse_relationships(self, resource, relationships, path):
+        relationships = [
+            (resource.relationships[relationship_name], value)
             for relationship_name, value in relationships.items()
+        ]
+        for relationship, _ in relationships:
+            self._check_full_replacement(
+                relationship=relationship,
+                path=path + [relationship.name]
+            )
+        return {
+            relationship.name: self._parse_relationship(
+                resource=resource,
+                relationship=relationship,
+                data=value['data'],
+                path=path + [relationship.name, 'data']
+            )
+            for relationship, value in relationships
         }
 
-    def _parse_relationship(self, resource, relationship_name, data):
-        relationship = resource.relationships[relationship_name]
-        path = ['data', 'relationships', relationship.name, 'data']
+    def _check_full_replacement(self, relationship, path):
+        if relationship.many and not relationship.allow_full_replacement:
+            raise errors.FullReplacementDisallowed(
+                relationship=relationship.name,
+                path=path
+            )
+
+    def _parse_relationship(
+        self, resource, relationship, data, path, ignore_not_found=False
+    ):
         if relationship.many:
-            if not relationship.allow_full_replacement:
-                raise errors.FullReplacementDisallowed(relationship_name)
             return self._parse_linkages(
                 relationship,
                 linkages=data,
-                path=path
+                path=path,
+                ignore_not_found=ignore_not_found
             )
         else:
             return self._parse_linkage(relationship, linkage=data, path=path)
 
     def _parse_linkage(self, relationship, linkage, path):
         if linkage is not None:
-            assert linkage['type'] == relationship.type
+            if linkage['type'] != relationship.type:
+                raise errors.TypeMismatch(
+                    type=linkage['type'],
+                    path=path + ['type']
+                )
             return self._fetch_object(
                 resource=relationship.resource,
                 id=linkage['id'],
                 path=path
             )
 
-    def _parse_linkages(self, relationship, linkages, path):
-        return [
-            self._parse_linkage(relationship, linkage, path + [i])
-            for i, linkage in enumerate(linkages)
-        ]
+    def _parse_linkages(
+        self, relationship, linkages, path, ignore_not_found=False
+    ):
+        objs = []
+        for i, linkage in enumerate(linkages):
+            try:
+                obj = self._parse_linkage(relationship, linkage, path + [i])
+            except errors.ResourceNotFound:
+                if not ignore_not_found:
+                    raise
+            else:
+                objs.append(obj)
+        return objs
 
     def _validate(self, payload, schema):
         try:
@@ -186,6 +274,12 @@ class Controller(object):
             return self.resource_registry.by_type[type]
         except KeyError:
             raise errors.InvalidResource(type)
+
+    def _get_relationship(self, resource, relationship_name):
+        try:
+            return resource.relationships[relationship_name]
+        except KeyError:
+            raise errors.RelationshipNotFound(resource.type, relationship_name)
 
     def _build_params(self, type):
         return Parameters(

@@ -136,7 +136,9 @@ class TestConflictingType(object):
     def test_returns_type_mismatch_error(self, response):
         error = response.json['errors'][0]
         assert error['code'] == 'TYPE_MISMATCH'
-        assert error['detail'] == "authors does not match the endpoint type."
+        assert error['detail'] == (
+            "authors is not a valid type for this operation."
+        )
         assert error['source'] == {'pointer': '/data/type'}
 
 

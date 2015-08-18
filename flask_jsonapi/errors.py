@@ -24,24 +24,25 @@ class InvalidJSON(Error):
 
 
 class TypeMismatch(Error):
-    def __init__(self, type):
+    def __init__(self, type, path=None):
         self.type = type
+        self.path = path
 
     @property
     def errors(self):
-        return [
-            {
-                "code": error_codes.TYPE_MISMATCH,
-                "status": Conflict.code,
-                "title": "Type mismatch",
-                "detail": (
-                    "{type} does not match the endpoint type."
-                ).format(type=self.type),
-                "source": {
-                    "pointer": '/data/type'
-                }
+        error = {
+            "code": error_codes.TYPE_MISMATCH,
+            "status": Conflict.code,
+            "title": "Type mismatch",
+            "detail": (
+                "{type} is not a valid type for this operation."
+            ).format(type=self.type),
+        }
+        if self.path is not None:
+            error["source"] = {
+                "pointer": JsonPointer.from_parts(self.path or ['']).path
             }
-        ]
+        return [error]
 
 
 class IDMismatch(Error):
@@ -66,27 +67,26 @@ class IDMismatch(Error):
 
 
 class FullReplacementDisallowed(Error):
-    def __init__(self, relationship):
+    def __init__(self, relationship, path=None):
         self.relationship = relationship
+        self.path = path
 
     @property
     def errors(self):
-        return [
-            {
-                "code": error_codes.FULL_REPLACEMENT_DISALLOWED,
-                "status": Forbidden.code,
-                "title": "Full replacement disallowed",
-                "detail": (
-                    "Full replacement of {relationship} is not "
-                    "allowed."
-                ).format(relationship=self.relationship),
-                "source": {
-                    "pointer": '/data/relationships/{relationship}'.format(
-                        relationship=self.relationship
-                    )
-                }
+        error = {
+            "code": error_codes.FULL_REPLACEMENT_DISALLOWED,
+            "status": Forbidden.code,
+            "title": "Full replacement disallowed",
+            "detail": (
+                "Full replacement of {relationship} is not "
+                "allowed."
+            ).format(relationship=self.relationship),
+        }
+        if self.path is not None:
+            error["source"] = {
+                "pointer": JsonPointer.from_parts(self.path or ['']).path
             }
-        ]
+        return [error]
 
 
 class ValidationError(Error):
