@@ -1,6 +1,6 @@
 __version__ = '0.1.0 '
 
-from .controllers import Controller
+from .controllers.default import DefaultController
 from .resource_registry import ResourceRegistry
 from .views import blueprint
 
@@ -21,7 +21,7 @@ class JSONAPI(object):
         self.url_prefix = url_prefix
 
         if controller is None:
-            self.controller = Controller(self.resources)
+            self.controller = DefaultController(self.resources)
         else:
             self.controller = controller
         if app is not None:

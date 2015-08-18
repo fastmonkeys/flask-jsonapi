@@ -7,6 +7,7 @@ from bunch import Bunch
 from flask import Flask, Response
 from flask.json import JSONEncoder as _JSONEncoder
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.utils import import_string
 
 from flask_jsonapi import JSONAPI, ResourceRegistry
 from flask_jsonapi.resource import Resource
@@ -118,8 +119,13 @@ def resource_registry(db, models):
 
 
 @pytest.fixture
-def controller():
-    pass
+def controller_class(request, resource_registry):
+    return 'flask_jsonapi.controllers.default.DefaultController'
+
+
+@pytest.fixture
+def controller(controller_class, resource_registry):
+    return import_string(controller_class)(resource_registry)
 
 
 @pytest.fixture

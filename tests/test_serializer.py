@@ -47,9 +47,7 @@ def test_single_resource(resource_registry, book, db):
             "relationships": {
                 "author": {
                     "links": {
-                        "self": (
-                            "/api/books/11/relationships/author"
-                        ),
+                        "self": "/api/books/11/relationships/author",
                         "related": "/api/books/11/author"
                     },
                     "data": {
@@ -89,10 +87,7 @@ def test_single_resource(resource_registry, book, db):
                 },
                 "series": {
                     "links": {
-                        "self": (
-                            "/api/books/11/relationships/"
-                            "series"
-                        ),
+                        "self": "/api/books/11/relationships/series",
                         "related": "/api/books/11/series"
                     },
                     "data": None
@@ -146,9 +141,7 @@ def test_sparse_fieldsets(resource_registry, book, db):
             "relationships": {
                 "author": {
                     "links": {
-                        "self": (
-                            "/api/books/11/relationships/author"
-                        ),
+                        "self": "/api/books/11/relationships/author",
                         "related": "/api/books/11/author"
                     },
                     "data": {

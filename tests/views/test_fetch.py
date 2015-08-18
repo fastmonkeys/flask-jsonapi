@@ -1,14 +1,12 @@
 import pytest
 
-from flask_jsonapi import controllers
 
-
-@pytest.fixture(params=['Controller', 'PostgreSQLController'])
-def controller(request, resource_registry):
-    try:
-        return getattr(controllers, request.param)(resource_registry)
-    except ImportError:
-        pytest.skip()
+@pytest.fixture(params=[
+    'flask_jsonapi.controllers.default.DefaultController',
+    'flask_jsonapi.controllers.postgresql.PostgreSQLController',
+])
+def controller_class(request):
+    return request.param
 
 
 class TestSuccessfulRequest(object):
