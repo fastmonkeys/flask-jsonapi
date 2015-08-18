@@ -31,11 +31,13 @@ class PostgreSQLController(DefaultController):
         resource = self._get_resource(type)
         params = self._build_params(type)
         include = params.include.raw
+        links = self._get_links(params)
         query = self.query_builder.select_one(
             resource.model_class,
             id,
             include=include.split(',') if include else None,
             fields=params.fields,
+            links=links,
             from_obj=resource.store.query(resource.model_class),
             as_text=True
         )
@@ -48,37 +50,38 @@ class PostgreSQLController(DefaultController):
         resource = self._get_resource(type)
         params = self._build_params(type)
         include = params.include.raw
+        count = resource.store.count(resource.model_class)
+        links = self._get_links(params, count)
         query = self.query_builder.select(
             resource.model_class,
             include=include.split(',') if include else None,
             fields=params.fields,
+            links=links,
             from_obj=self._get_query(resource, params),
             as_text=True
         )
         return resource.store.session.execute(query).scalar()
 
-    def fetch_related(self, type, id, relation):
+    def fetch_related(self, type, id, relationship):
         resource = self._get_resource(type)
-        try:
-            related_resource = resource.relationships[relation]
-        except KeyError:
-            raise errors.RelationshipNotFound(resource.type, relation)
-        params = self._build_params(related_resource.type)
-        relationship = resource.store._get_relationship_property(
-            resource.model_class,
-            relation
-        )
-
+        relationship = self._get_relationship(resource, relationship)
+        params = self._build_params(relationship.type)
         obj = self._fetch_object(resource, id)
         include = params.include.raw
+        if relationship.many:
+            count = resource.store.count_related(obj, relationship.name)
+        else:
+            count = None
+        links = self._get_links(params, count)
         query = self.query_builder.select(
-            related_resource.model_class,
+            relationship.model_class,
             include=include.split(',') if include else None,
             fields=params.fields,
+            links=links,
             as_text=True,
-            multiple=relationship.uselist,
+            multiple=relationship.many,
             from_obj=resource.store._paginate(
-                resource.store._query_related(obj, relation),
+                resource.store._query_related(obj, relationship.name),
                 params.pagination
             )
         )

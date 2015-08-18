@@ -53,11 +53,9 @@ class TestSuccessfulRequest(object):
         assert 'id' in create_response.json['data']
         assert 'title' in create_response.json['data']['attributes']
 
-    @pytest.mark.xfail
     def test_response_includes_location_header(self, create_response):
         assert create_response.location == 'http://example.com/books/12'
 
-    @pytest.mark.xfail
     def test_location_header_matches_self_link(self, create_response):
         self_link = create_response.json['links']['self']
         assert self_link == create_response.location

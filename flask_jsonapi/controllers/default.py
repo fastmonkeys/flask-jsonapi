@@ -1,8 +1,9 @@
 import jsonschema
 import qstring
 from flask import abort, current_app, json, request
+from werkzeug.urls import url_encode
 
-from .. import errors, exceptions, schemas
+from .. import errors, exceptions, link_builder, schemas
 from ..params import Parameters
 from ..serializer import Serializer
 
@@ -15,29 +16,55 @@ class DefaultController(object):
         resource = self._get_resource(type)
         params = self._build_params(type)
         instances = resource.store.fetch(resource.model_class, params)
-        return self._serialize(instances, params)
+        count = resource.store.count(resource.model_class)
+        links = self._get_links(params, count)
+        return self._serialize(instances, params, links)
 
     def fetch_one(self, type, id):
         resource = self._get_resource(type)
         params = self._build_params(type)
         instance = self._fetch_object(resource, id, params)
-        return self._serialize(instance, params)
+        links = self._get_links(params)
+        return self._serialize(instance, params, links)
 
     def fetch_related(self, type, id, relationship):
         resource = self._get_resource(type)
         relationship = self._get_relationship(resource, relationship)
         params = self._build_params(relationship.type)
         instance = self._fetch_object(resource, id)
-        related = resource.store.fetch_related(instance, relationship.name, params)
-        return self._serialize(related, params)
+        related = resource.store.fetch_related(
+            instance=instance,
+            relationship=relationship.name,
+            params=params
+        )
+        if relationship.many:
+            count = resource.store.count_related(instance, relationship.name)
+        else:
+            count = None
+        links = self._get_links(params, count)
+        return self._serialize(related, params, links)
 
     def fetch_relationship(self, type, id, relationship):
         resource = self._get_resource(type)
         relationship = self._get_relationship(resource, relationship)
         params = self._build_params(relationship.type)
         instance = self._fetch_object(resource, id)
-        related = resource.store.fetch_related(instance, relationship.name, params)
-        return self._serialize_relationship(related, params)
+        related = resource.store.fetch_related(
+            instance=instance,
+            relationship=relationship.name,
+            params=params
+        )
+        if relationship.many:
+            count = resource.store.count_related(instance, relationship.name)
+        else:
+            count = None
+        links = self._get_links(params, count)
+        links['related'] = link_builder.build_related_url(
+            type=type,
+            id=id,
+            relationship=relationship.name
+        )
+        return self._serialize_relationship(related, params, links)
 
     def create(self, type):
         resource = self._get_resource(type)
@@ -54,9 +81,16 @@ class DefaultController(object):
             )
         except exceptions.ObjectAlreadyExists:
             raise errors.ResourceAlreadyExists(type=type, id=id)
+        links = {
+            'self': link_builder.build_individual_resource_url(
+                type=type,
+                id=resource.store.get_id(instance)
+            )
+        }
         return current_app.response_class(
-            response=self._serialize(instance, params),
-            status=201
+            response=self._serialize(instance, params, links),
+            status=201,
+            headers={'Location': links['self']}
         )
 
     def update(self, type, id):
@@ -72,7 +106,8 @@ class DefaultController(object):
                 data=payload['data']
             )
         )
-        return self._serialize(instance, params)
+        links = self._get_links(params)
+        return self._serialize(instance, params, links)
 
     def delete(self, type, id):
         resource = self._get_resource(type)
@@ -284,10 +319,39 @@ class DefaultController(object):
             params=qstring.nest(request.args.items(multi=True))
         )
 
-    def _serialize(self, input, params):
+    def _serialize(self, input, params, links):
         serializer = Serializer(self.resource_registry, params)
-        return json.dumps(serializer.dump(input))
+        data = serializer.dump(input, links)
+        return json.dumps(data)
 
-    def _serialize_relationship(self, input, params):
+    def _get_links(self, params, count=None):
+        links = {
+            'self': request.base_url + self._build_query_string(params.raw)
+        }
+        if count is not None:
+            links.update(self._get_pagination_links(params, count))
+        return links
+
+    def _get_pagination_links(self, params, count):
+        link_params = params.pagination.get_link_params(count)
+        links = {}
+        for name, page_params in link_params.items():
+            if page_params:
+                raw_params = params.raw.copy()
+                raw_params['page'] = page_params
+                link = request.base_url + self._build_query_string(raw_params)
+            else:
+                link = None
+            links[name] = link
+        return links
+
+    def _build_query_string(self, params):
+        query_string = url_encode(qstring.unnest(params))
+        if query_string:
+            query_string = '?' + query_string
+        return query_string
+
+    def _serialize_relationship(self, input, params, links):
         serializer = Serializer(self.resource_registry, params)
-        return json.dumps(serializer.dump_relationship(input))
+        data = serializer.dump_relationship(input, links)
+        return json.dumps(data)

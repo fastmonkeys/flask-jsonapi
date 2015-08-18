@@ -21,24 +21,20 @@ def author(db, models, fantasy_database):
     return db.session.query(models.Author).filter_by(id=1).one()
 
 
-def test_single_resource(resource_registry, book, db):
+def test_single_resource(jsonapi, resource_registry, book, db):
     params = Parameters(
         resource_registry=resource_registry,
         type='books',
         params={}
     )
-    serializer = Serializer(
-        resource_registry=resource_registry,
-        params=params,
-        base_url='/api'
-    )
+    serializer = Serializer(resource_registry=resource_registry, params=params)
     data = serializer.dump(book)
     assert data == {
         "data": {
             "type": "books",
             "id": "11",
             "links": {
-                "self": "/api/books/11"
+                "self": "http://example.com/books/11"
             },
             "attributes": {
                 "title": "The Hobbit",
@@ -47,8 +43,10 @@ def test_single_resource(resource_registry, book, db):
             "relationships": {
                 "author": {
                     "links": {
-                        "self": "/api/books/11/relationships/author",
-                        "related": "/api/books/11/author"
+                        "self": (
+                            "http://example.com/books/11/relationships/author"
+                        ),
+                        "related": "http://example.com/books/11/author"
                     },
                     "data": {
                         "type": "authors",
@@ -58,10 +56,10 @@ def test_single_resource(resource_registry, book, db):
                 "chapters": {
                     "links": {
                         "self": (
-                            "/api/books/11/relationships"
+                            "http://example.com/books/11/relationships"
                             "/chapters"
                         ),
-                        "related": "/api/books/11/chapters"
+                        "related": "http://example.com/books/11/chapters"
                     },
                     "data": [
                         {"id": "271", "type": "chapters"},
@@ -87,34 +85,43 @@ def test_single_resource(resource_registry, book, db):
                 },
                 "series": {
                     "links": {
-                        "self": "/api/books/11/relationships/series",
-                        "related": "/api/books/11/series"
+                        "self": (
+                            "http://example.com/books/11/relationships/series"
+                        ),
+                        "related": "http://example.com/books/11/series"
                     },
                     "data": None
+                },
+                "stores": {
+                    "links": {
+                        "self": (
+                            "http://example.com/books/11/relationships/stores"
+                        ),
+                        "related": "http://example.com/books/11/stores"
+                    },
+                    "data": [
+                        {"type": "stores", "id": "2"}
+                    ]
                 }
             }
         }
     }
 
 
-def test_single_resource(resource_registry, db):
+def test_null_resource(jsonapi, resource_registry, db):
     params = Parameters(
         resource_registry=resource_registry,
         type='books',
         params={}
     )
-    serializer = Serializer(
-        resource_registry=resource_registry,
-        params=params,
-        base_url='/api'
-    )
+    serializer = Serializer(resource_registry=resource_registry, params=params)
     data = serializer.dump(None)
     assert data == {
         "data": None
     }
 
 
-def test_sparse_fieldsets(resource_registry, book, db):
+def test_sparse_fieldsets(jsonapi, resource_registry, book, db):
     params = Parameters(
         resource_registry=resource_registry,
         type='books',
@@ -125,7 +132,6 @@ def test_sparse_fieldsets(resource_registry, book, db):
     serializer = Serializer(
         resource_registry=resource_registry,
         params=params,
-        base_url='/api'
     )
     data = serializer.dump(book)
     assert data == {
@@ -133,7 +139,7 @@ def test_sparse_fieldsets(resource_registry, book, db):
             "type": "books",
             "id": "11",
             "links": {
-                "self": "/api/books/11"
+                "self": "http://example.com/books/11"
             },
             "attributes": {
                 "title": "The Hobbit",
@@ -141,8 +147,10 @@ def test_sparse_fieldsets(resource_registry, book, db):
             "relationships": {
                 "author": {
                     "links": {
-                        "self": "/api/books/11/relationships/author",
-                        "related": "/api/books/11/author"
+                        "self": (
+                            "http://example.com/books/11/relationships/author"
+                        ),
+                        "related": "http://example.com/books/11/author"
                     },
                     "data": {
                         "type": "authors",
@@ -154,7 +162,9 @@ def test_sparse_fieldsets(resource_registry, book, db):
     }
 
 
-def test_inclusion_of_related_resources(resource_registry, author, db):
+def test_inclusion_of_related_resources(
+    jsonapi, resource_registry, author, db
+):
     params = Parameters(
         resource_registry=resource_registry,
         type='authors',
@@ -167,11 +177,7 @@ def test_inclusion_of_related_resources(resource_registry, author, db):
             'include': 'books,books.series'
         }
     )
-    serializer = Serializer(
-        resource_registry=resource_registry,
-        params=params,
-        base_url='/api'
-    )
+    serializer = Serializer(resource_registry=resource_registry, params=params)
     data = serializer.dump(author)
     assert len(data['included']) == 5
     assert data == {
@@ -190,13 +196,15 @@ def test_inclusion_of_related_resources(resource_registry, author, db):
                         {"id": "11", "type": "books"}
                     ],
                     "links": {
-                        "related": "/api/authors/1/books",
-                        "self": "/api/authors/1/relationships/books"
+                        "related": "http://example.com/authors/1/books",
+                        "self": (
+                            "http://example.com/authors/1/relationships/books"
+                        )
                     }
                 }
             },
             "links": {
-                "self": "/api/authors/1"
+                "self": "http://example.com/authors/1"
             },
         },
         "included": [
@@ -207,7 +215,7 @@ def test_inclusion_of_related_resources(resource_registry, author, db):
                     "title": "The Fellowship of the Ring"
                 },
                 "links": {
-                    "self": "/api/books/1"
+                    "self": "http://example.com/books/1"
                 },
             },
             {
@@ -217,7 +225,7 @@ def test_inclusion_of_related_resources(resource_registry, author, db):
                     "title": "The Lord of the Rings"
                 },
                 "links": {
-                    "self": "/api/series/1"
+                    "self": "http://example.com/series/1"
                 },
             },
             {
@@ -227,7 +235,7 @@ def test_inclusion_of_related_resources(resource_registry, author, db):
                     "title": "The Two Towers"
                 },
                 "links": {
-                    "self": "/api/books/2"
+                    "self": "http://example.com/books/2"
                 },
             },
             {
@@ -237,7 +245,7 @@ def test_inclusion_of_related_resources(resource_registry, author, db):
                     "title": "Return of the King"
                 },
                 "links": {
-                    "self": "/api/books/3"
+                    "self": "http://example.com/books/3"
                 },
             },
             {
@@ -247,14 +255,14 @@ def test_inclusion_of_related_resources(resource_registry, author, db):
                     "title": "The Hobbit"
                 },
                 "links": {
-                    "self": "/api/books/11"
+                    "self": "http://example.com/books/11"
                 },
             },
         ]
     }
 
 
-def test_resource_collection(resource_registry, books, db):
+def test_resource_collection(jsonapi, resource_registry, books, db):
     params = Parameters(
         resource_registry=resource_registry,
         type='books',

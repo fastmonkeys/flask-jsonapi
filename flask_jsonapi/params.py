@@ -5,6 +5,8 @@ class Parameters(object):
     def __init__(self, resource_registry, type, params):
         resource = resource_registry.by_type[type]
 
+        self.raw = params.copy()
+
         self.fields = FieldsParameter(
             resource_registry,
             params.pop('fields', None)
@@ -25,12 +27,13 @@ class FieldsParameter(object):
     def __init__(self, resource_registry, fields):
         if fields is None:
             fields = {}
+        self.raw = fields
         self._resource_registry = resource_registry
-        self.requested = self._parse(fields)
+        self.requested = self._parse()
 
-    def _parse(self, fields):
+    def _parse(self):
         try:
-            field_items = fields.items()
+            field_items = self.raw.items()
         except AttributeError:
             raise errors.FieldTypeMissing()
         return {

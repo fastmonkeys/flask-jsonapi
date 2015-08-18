@@ -9,7 +9,7 @@ def controller_class(request):
     return request.param
 
 
-class TestSuccessfulRequest(object):
+class TestFetchOne(object):
     @pytest.fixture
     def response(self, client, fantasy_database):
         return client.get('/books/1')
@@ -20,6 +20,10 @@ class TestSuccessfulRequest(object):
     def test_returns_requested_resource(self, response):
         assert response.json['data']['type'] == 'books'
         assert response.json['data']['id'] == '1'
+
+    def test_response_contains_self_link(self, response):
+        self_link = response.json['links']['self']
+        assert self_link == 'http://example.com/books/1'
 
 
 class TestResourceNotFound(object):
@@ -45,6 +49,10 @@ class TestIncludeRelatedResources(object):
     def test_returns_requested_related_resources(self, response):
         assert len(response.json['included']) == 1
 
+    def test_response_contains_self_link(self, response):
+        self_link = response.json['links']['self']
+        assert self_link == 'http://example.com/books/1?include=author'
+
 
 class TestSparseFieldsets(object):
     @pytest.fixture
@@ -58,6 +66,12 @@ class TestSparseFieldsets(object):
         book = response.json['data']
         assert list(book['attributes'].keys()) == ['title']
         assert 'relationships' not in book
+
+    def test_response_contains_self_link(self, response):
+        self_link = response.json['links']['self']
+        assert self_link == (
+            'http://example.com/books/1?fields%5Bbooks%5D=title'
+        )
 
 
 class TestRequestInvalidResource(object):

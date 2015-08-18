@@ -33,14 +33,14 @@ def fetch_one(type, id):
     return controller.fetch_one(type, id)
 
 
-@blueprint.route('/<type>/<id>/<relation>', methods=['GET'])
-def fetch_related(type, id, relation):
-    return controller.fetch_related(type, id, relation)
+@blueprint.route('/<type>/<id>/<relationship>', methods=['GET'])
+def fetch_related(type, id, relationship):
+    return controller.fetch_related(type, id, relationship)
 
 
-@blueprint.route('/<type>/<id>/relationships/<relation>', methods=['GET'])
-def fetch_relationship(type, id, relation):
-    return controller.fetch_relationship(type, id, relation)
+@blueprint.route('/<type>/<id>/relationships/<relationship>', methods=['GET'])
+def fetch_relationship(type, id, relationship):
+    return controller.fetch_relationship(type, id, relationship)
 
 
 @blueprint.route('/<type>', methods=['POST'])
@@ -58,16 +58,22 @@ def update(type, id):
     return controller.update(type, id)
 
 
-@blueprint.route('/<type>/<id>/relationships/<relation>', methods=['PATCH'])
-def update_relationship(type, id, relation):
-    return controller.update_relationship(type, id, relation)
+@blueprint.route(
+    '/<type>/<id>/relationships/<relationship>',
+    methods=['PATCH']
+)
+def update_relationship(type, id, relationship):
+    return controller.update_relationship(type, id, relationship)
 
 
-@blueprint.route('/<type>/<id>/relationships/<relation>', methods=['POST'])
-def create_relationship(type, id, relation):
-    return controller.create_relationship(type, id, relation)
+@blueprint.route('/<type>/<id>/relationships/<relationship>', methods=['POST'])
+def create_relationship(type, id, relationship):
+    return controller.create_relationship(type, id, relationship)
 
 
-@blueprint.route('/<type>/<id>/relationships/<relation>', methods=['DELETE'])
-def delete_relationship(type, id, relation):
-    return controller.delete_relationship(type, id, relation)
+@blueprint.route(
+    '/<type>/<id>/relationships/<relationship>',
+    methods=['DELETE']
+)
+def delete_relationship(type, id, relationship):
+    return controller.delete_relationship(type, id, relationship)

@@ -9,7 +9,7 @@ def controller_class(request):
     return request.param
 
 
-class TestSuccessfulRequestToOneRelation(object):
+class TestFetchRelatedToOneRelation(object):
     @pytest.fixture
     def response(self, client, fantasy_database):
         return client.get('/books/1/author')
@@ -22,8 +22,12 @@ class TestSuccessfulRequestToOneRelation(object):
         assert data['type'] == 'authors'
         assert data['id'] == '1'
 
+    def test_response_contains_self_link(self, response):
+        self_link = response.json['links']['self']
+        assert self_link == 'http://example.com/books/1/author'
 
-class TestSuccessfulRequestEmptyToOneRelation(object):
+
+class TestFetchRelatedEmptyToOneRelation(object):
     @pytest.fixture
     def response(self, client, fantasy_database):
         return client.get('/books/11/series')
@@ -35,7 +39,7 @@ class TestSuccessfulRequestEmptyToOneRelation(object):
         assert response.json['data'] is None
 
 
-class TestSuccessfulRequestToManyRelation(object):
+class TestFetchRelatedToManyRelation(object):
     @pytest.fixture
     def response(self, client, fantasy_database):
         return client.get('/books/1/chapters')
@@ -46,8 +50,12 @@ class TestSuccessfulRequestToManyRelation(object):
     def test_returns_requested_related_resources(self, response):
         assert len(response.json['data']) == 20
 
+    def test_response_contains_self_link(self, response):
+        self_link = response.json['links']['self']
+        assert self_link == 'http://example.com/books/1/chapters'
 
-class TestSuccessfulRequestEmptyToManyRelation(object):
+
+class TestFetchRelatedEmptyToManyRelation(object):
     @pytest.fixture
     def response(self, client, fantasy_database):
         return client.get('/stores/1/books')
@@ -70,6 +78,10 @@ class TestToOneRelationWithIncludedRelatedResources(object):
     def test_returns_requested_related_resources(self, response):
         assert len(response.json['included']) == 4
 
+    def test_response_contains_self_link(self, response):
+        self_link = response.json['links']['self']
+        assert self_link == 'http://example.com/books/1/author?include=books'
+
 
 class TestToManyRelationWithIncludedRelatedResources(object):
     @pytest.fixture
@@ -81,6 +93,10 @@ class TestToManyRelationWithIncludedRelatedResources(object):
 
     def test_returns_requested_related_resources(self, response):
         assert len(response.json['included']) == 2
+
+    def test_response_contains_self_link(self, response):
+        self_link = response.json['links']['self']
+        assert self_link == 'http://example.com/stores/2/books?include=author'
 
 
 class TestToOneRelationWithSparseFieldsets(object):
@@ -96,6 +112,12 @@ class TestToOneRelationWithSparseFieldsets(object):
         assert list(author['attributes'].keys()) == ['name']
         assert 'relationships' not in author
 
+    def test_response_contains_self_link(self, response):
+        self_link = response.json['links']['self']
+        assert self_link == (
+            'http://example.com/books/1/author?fields%5Bauthors%5D=name'
+        )
+
 
 class TestToManyRelationWithSparseFieldsets(object):
     @pytest.fixture
@@ -110,6 +132,12 @@ class TestToManyRelationWithSparseFieldsets(object):
         assert list(book['attributes'].keys()) == ['title']
         assert 'relationships' not in book
 
+    def test_response_contains_self_link(self, response):
+        self_link = response.json['links']['self']
+        assert self_link == (
+            'http://example.com/stores/2/books?fields%5Bbooks%5D=title'
+        )
+
 
 class TestToManyRelationPagination(object):
     @pytest.fixture
@@ -121,6 +149,38 @@ class TestToManyRelationPagination(object):
 
     def test_returns_resource_objects_for_the_requested_page(self, response):
         assert len(response.json['data']) == 2
+
+    def test_response_contains_self_link(self, response):
+        self_link = response.json['links']['self']
+        assert self_link == (
+            'http://example.com/stores/2/books?'
+            'page%5Bnumber%5D=3&page%5Bsize%5D=5'
+        )
+
+    def test_response_contains_first_link(first, response):
+        first_link = response.json['links']['first']
+        assert first_link == (
+            'http://example.com/stores/2/books?'
+            'page%5Bnumber%5D=1&page%5Bsize%5D=5'
+        )
+
+    def test_response_contains_prev_link(prev, response):
+        prev_link = response.json['links']['prev']
+        assert prev_link == (
+            'http://example.com/stores/2/books?'
+            'page%5Bnumber%5D=2&page%5Bsize%5D=5'
+        )
+
+    def test_response_contains_next_link(next, response):
+        next_link = response.json['links']['next']
+        assert next_link is None
+
+    def test_response_contains_last_link(last, response):
+        last_link = response.json['links']['last']
+        assert last_link == (
+            'http://example.com/stores/2/books?'
+            'page%5Bnumber%5D=3&page%5Bsize%5D=5'
+        )
 
 
 class TestRequestInvalidResource(object):

@@ -12,14 +12,12 @@ class TestFetchToOneRelationship(object):
     def test_responds_with_200_status_code(self, response):
         assert response.status_code == 200
 
-    @pytest.mark.xfail
     def test_response_contains_self_link(self, response):
         self_link = response.json['links']['self']
         assert self_link == 'http://example.com/books/1/relationships/author'
 
-    @pytest.mark.xfail
     def test_response_contains_related_link(self, response):
-        related_link = response.json['links']['self']
+        related_link = response.json['links']['related']
         assert related_link == 'http://example.com/books/1/author'
 
     def test_response_contains_appropriate_resource_linkage(self, response):
@@ -52,14 +50,12 @@ class TestFetchToManyRelationship(object):
     def test_responds_with_200_status_code(self, response):
         assert response.status_code == 200
 
-    @pytest.mark.xfail
     def test_response_contains_self_link(self, response):
         self_link = response.json['links']['self']
         assert self_link == 'http://example.com/books/1/relationships/chapters'
 
-    @pytest.mark.xfail
     def test_response_contains_related_link(self, response):
-        related_link = response.json['links']['self']
+        related_link = response.json['links']['related']
         assert related_link == 'http://example.com/books/1/chapters'
 
     def test_response_contains_appropriate_resource_linkage(self, response):

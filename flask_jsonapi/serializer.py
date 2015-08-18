@@ -1,13 +1,14 @@
 import itertools
 
+from . import links
+
 
 class Serializer(object):
-    def __init__(self, resource_registry, params, base_url=''):
+    def __init__(self, resource_registry, params):
         self.resource_registry = resource_registry
         self.params = params
-        self.base_url = base_url
 
-    def dump(self, input_):
+    def dump(self, input_, links=None):
         many = isinstance(input_, list)
         self._included_resource_objects = set()
         data = self._dump_primary_data(input_, many)
@@ -15,15 +16,20 @@ class Serializer(object):
         document = {'data': data}
         if included:
             document['included'] = included
+        if links:
+            document['links'] = links
         return document
 
-    def dump_relationship(self, input_):
+    def dump_relationship(self, input_, links=None):
         many = isinstance(input_, list)
         if many:
             data = [self._dump_resource_identifier(m) for m in input_]
         else:
             data = self._dump_resource_identifier(input_)
-        return {'data': data}
+        document = {'data': data}
+        if links:
+            document['links'] = links
+        return document
 
     def _dump_primary_data(self, input_, many):
         if many:
@@ -66,7 +72,7 @@ class Serializer(object):
             resource_object['relationships'] = relationships_object
 
         resource_object['links'] = {
-            'self': self._get_model_url(
+            'self': links.build_individual_resource_url(
                 type=resource_object['type'],
                 id=resource_object['id']
             )
@@ -103,15 +109,15 @@ class Serializer(object):
             data = self._dump_resource_identifier(related)
         return {
             "links": {
-                "self": self._get_relationship_url(
+                "self": links.build_relationship_url(
                     type=resource.type,
                     id=resource.store.get_id(model),
-                    relation=relationship.name
+                    relationship=relationship.name
                 ),
-                "related": self._get_related_url(
+                "related": links.build_related_url(
                     type=resource.type,
                     id=resource.store.get_id(model),
-                    relation=relationship.name
+                    relationship=relationship.name
                 ),
             },
             "data": data
@@ -153,24 +159,3 @@ class Serializer(object):
                         include[relationship.name]
                     ):
                         yield m
-
-    def _get_collection_url(self, type):
-        return '{base_url}/{type}'.format(base_url=self.base_url, type=type)
-
-    def _get_model_url(self, type, id):
-        return '{collection_url}/{id}'.format(
-            collection_url=self._get_collection_url(type),
-            id=id
-        )
-
-    def _get_related_url(self, type, id, relation):
-        return '{model_url}/{relation}'.format(
-            model_url=self._get_model_url(type, id),
-            relation=relation
-        )
-
-    def _get_relationship_url(self, type, id, relation):
-        return '{model_url}/relationships/{relation}'.format(
-            model_url=self._get_model_url(type, id),
-            relation=relation
-        )

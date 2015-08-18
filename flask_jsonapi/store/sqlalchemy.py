@@ -30,6 +30,9 @@ class SQLAlchemyStore(Store):
     def get_related(self, instance, relationship):
         return getattr(instance, relationship)
 
+    def count_related(self, instance, relationship):
+        return self._query_related(instance, relationship).count()
+
     def fetch_related(self, instance, relationship, params=None):
         if self.is_to_many_relationship(instance.__class__, relationship):
             return self._fetch_many_related(instance, relationship, params)
