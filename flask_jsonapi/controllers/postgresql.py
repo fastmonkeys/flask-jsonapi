@@ -42,7 +42,7 @@ class PostgreSQLController(DefaultController):
             as_text=True
         )
         result = resource.store.session.execute(query).scalar()
-        if result == '{"data":null}':
+        if result is None:
             raise errors.ResourceNotFound(type, id)
         return result
 
