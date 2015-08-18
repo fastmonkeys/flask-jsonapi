@@ -1,6 +1,6 @@
 import itertools
 
-from . import links
+from . import link_builder
 
 
 class Serializer(object):
@@ -72,7 +72,7 @@ class Serializer(object):
             resource_object['relationships'] = relationships_object
 
         resource_object['links'] = {
-            'self': links.build_individual_resource_url(
+            'self': link_builder.build_individual_resource_url(
                 type=resource_object['type'],
                 id=resource_object['id']
             )
@@ -109,12 +109,12 @@ class Serializer(object):
             data = self._dump_resource_identifier(related)
         return {
             "links": {
-                "self": links.build_relationship_url(
+                "self": link_builder.build_relationship_url(
                     type=resource.type,
                     id=resource.store.get_id(model),
                     relationship=relationship.name
                 ),
-                "related": links.build_related_url(
+                "related": link_builder.build_related_url(
                     type=resource.type,
                     id=resource.store.get_id(model),
                     relationship=relationship.name
