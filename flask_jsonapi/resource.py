@@ -35,7 +35,7 @@ class Resource(object):
 
     def register(self, registry):
         if self._registry is not None:
-            raise exceptions.ImproperlyConfigured(
+            raise exceptions.ResourceAlreadyRegistered(
                 '{resource!r} has already been registered.'.format(
                     resource=self
                 )
@@ -43,7 +43,10 @@ class Resource(object):
         self._registry = registry
 
     def __repr__(self):
-        return '<Resource {type}>'.format(type=self.type)
+        return '<{cls} type={type!r}>'.format(
+            cls=self.__class__.__name__,
+            type=self.type
+        )
 
 
 class Field(object):
@@ -55,8 +58,7 @@ class Field(object):
     def _check_name(self):
         if self.name in {'id', 'type'}:
             raise exceptions.FieldNamingConflict(
-                "A resource cannot have an attribute or a relationship named "
-                "'type' or 'id'."
+                "A resource cannot have a field named 'type' or 'id'."
             )
 
     def __repr__(self):
@@ -72,7 +74,7 @@ class Attribute(Field):
 
 class Relationship(Field):
     def __init__(
-        self, parent_resource, name, allow_include=True,
+        self, parent_resource, name, allow_include=None,
         allow_full_replacement=False
     ):
         super(Relationship, self).__init__(parent_resource, name)
@@ -80,7 +82,9 @@ class Relationship(Field):
             self.parent_resource.model_class,
             self.name
         )
-        self.allow_include = allow_include
+        self.allow_include = (
+            not self.many if allow_include is None else allow_include
+        )
         self.allow_full_replacement = allow_full_replacement
 
     @property
