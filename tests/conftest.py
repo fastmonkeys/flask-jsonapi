@@ -9,7 +9,7 @@ from flask.json import JSONEncoder as _JSONEncoder
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import import_string
 
-from flask_jsonapi import JSONAPI, ResourceRegistry
+from flask_jsonapi import JSONAPI
 from flask_jsonapi.resource import Resource
 from flask_jsonapi.store.sqlalchemy import SQLAlchemyStore
 
@@ -55,8 +55,21 @@ def db(app):
 
 
 @pytest.fixture
-def resource_registry(db, models):
-    resource_registry = ResourceRegistry()
+def resource_registry(jsonapi):
+    return jsonapi.resources
+
+
+@pytest.fixture
+def controller_class():
+    return 'flask_jsonapi.controllers.default.DefaultController'
+
+
+@pytest.fixture
+def jsonapi(app, controller_class, db, models):
+    jsonapi = JSONAPI(
+        app,
+        controller_class=import_string(controller_class)
+    )
 
     series = Resource(
         type='series',
@@ -109,32 +122,13 @@ def resource_registry(db, models):
     stores.add_attribute('name')
     stores.add_relationship('books')
 
-    resource_registry.register(series)
-    resource_registry.register(authors)
-    resource_registry.register(books)
-    resource_registry.register(chapters)
-    resource_registry.register(stores)
+    jsonapi.resources.register(series)
+    jsonapi.resources.register(authors)
+    jsonapi.resources.register(books)
+    jsonapi.resources.register(chapters)
+    jsonapi.resources.register(stores)
 
-    return resource_registry
-
-
-@pytest.fixture
-def controller_class(request, resource_registry):
-    return 'flask_jsonapi.controllers.default.DefaultController'
-
-
-@pytest.fixture
-def controller(controller_class, resource_registry):
-    return import_string(controller_class)(resource_registry)
-
-
-@pytest.fixture
-def jsonapi(app, resource_registry, controller):
-    return JSONAPI(
-        app,
-        resource_registry=resource_registry,
-        controller=controller
-    )
+    return jsonapi
 
 
 @pytest.yield_fixture

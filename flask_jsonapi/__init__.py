@@ -9,21 +9,14 @@ class JSONAPI(object):
     def __init__(
         self,
         app=None,
-        resource_registry=None,
-        controller=None,
+        controller_class=DefaultController,
         url_prefix=''
     ):
         self.app = app
-        if resource_registry is None:
-            self.resources = ResourceRegistry()
-        else:
-            self.resources = resource_registry
+        self.resources = ResourceRegistry()
         self.url_prefix = url_prefix
+        self.controller = controller_class(resource_registry=self.resources)
 
-        if controller is None:
-            self.controller = DefaultController(self.resources)
-        else:
-            self.controller = controller
         if app is not None:
             self.init_app(app)
 
