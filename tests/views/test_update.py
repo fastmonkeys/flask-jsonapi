@@ -57,7 +57,7 @@ class TestMissingType(object):
 
     def test_returns_validation_error(self, update_response):
         error = update_response.json['errors'][0]
-        assert error['code'] == 'VALIDATION_ERROR'
+        assert error['code'] == 'ValidationError'
         assert error['detail'] == "'type' is a required property"
         assert error['source'] == {'pointer': '/data'}
 
@@ -79,12 +79,12 @@ class TestMissingId(object):
 
     def test_returns_validation_error(self, update_response):
         error = update_response.json['errors'][0]
-        assert error['code'] == 'VALIDATION_ERROR'
+        assert error['code'] == 'ValidationError'
         assert error['detail'] == "'id' is a required property"
         assert error['source'] == {'pointer': '/data'}
 
 
-class TestInvalidResourceType(object):
+class TestResourceTypeNotFound(object):
     @pytest.fixture
     def response(self, client, fantasy_database):
         return client.patch('/foobars/1')
@@ -92,8 +92,8 @@ class TestInvalidResourceType(object):
     def test_responds_with_404_status_code(self, response):
         assert response.status_code == 404
 
-    def test_returns_invalid_resource_error(self, response):
-        assert response.json['errors'][0]['code'] == 'INVALID_RESOURCE'
+    def test_returns_resource_type_not_found_error(self, response):
+        assert response.json['errors'][0]['code'] == 'ResourceTypeNotFound'
 
 
 class TestResourceNotFound(object):
@@ -106,7 +106,7 @@ class TestResourceNotFound(object):
 
     def test_returns_invalid_resource_error(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'RESOURCE_NOT_FOUND'
+        assert error['code'] == 'ResourceNotFound'
         assert error['detail'] == (
             "The resource identified by (books, 123123) type-id pair "
             "could not be found."
@@ -122,7 +122,7 @@ class TestInvalidJSON(object):
         assert response.status_code == 400
 
     def test_returns_invalid_json_error(self, response):
-        assert response.json['errors'][0]['code'] == 'INVALID_JSON'
+        assert response.json['errors'][0]['code'] == 'InvalidJSON'
 
 
 class TestInvalidRequestBody(object):
@@ -135,7 +135,7 @@ class TestInvalidRequestBody(object):
 
     def test_returns_validation_error(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'VALIDATION_ERROR'
+        assert error['code'] == 'ValidationError'
         assert error['detail'] == "'data' is a required property"
         assert error['source'] == {'pointer': '/'}
 
@@ -155,7 +155,7 @@ class TestConflictingType(object):
 
     def test_returns_type_mismatch_error(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'TYPE_MISMATCH'
+        assert error['code'] == 'TypeMismatch'
         assert error['detail'] == (
             'authors is not a valid type for this operation.'
         )
@@ -177,7 +177,7 @@ class TestConflictingID(object):
 
     def test_returns_type_mismatch_error(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'ID_MISMATCH'
+        assert error['code'] == 'IDMismatch'
         assert error['detail'] == '2 does not match the endpoint id.'
         assert error['source'] == {'pointer': '/data/id'}
 
@@ -408,7 +408,7 @@ class TestRejectFullReplacement(object):
 
     def test_returns_validation_error(self, update_response):
         error = update_response.json['errors'][0]
-        assert error['code'] == 'FULL_REPLACEMENT_DISALLOWED'
+        assert error['code'] == 'FullReplacementDisallowed'
         assert error['detail'] == "Full replacement of books is not allowed."
         assert error['source'] == {'pointer': '/data/relationships/books'}
 
@@ -444,7 +444,7 @@ class TestReferencingRelatedResourceThatDoesNotExist(object):
 
     def test_returns_resource_not_found_error(self, update_response):
         error = update_response.json['errors'][0]
-        assert error['code'] == 'RESOURCE_NOT_FOUND'
+        assert error['code'] == 'ResourceNotFound'
         assert error['detail'] == (
             "The resource identified by (stores, 123123) type-id pair "
             "could not be found."

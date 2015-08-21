@@ -142,9 +142,9 @@ class TestPagedPagination(object):
 class TestOffsetPaginator(object):
     def test_extra_parameters_raises_error(self):
         paginator = OffsetPaginator()
-        with pytest.raises(errors.InvalidPageParameters) as exc_info:
+        with pytest.raises(errors.InvalidPageParameter) as exc_info:
             paginator.paginate({'foo': 'bar'})
-        assert exc_info.value.params == {'foo'}
+        assert exc_info.value.source_parameter == 'page[foo]'
 
     def test_defaults(self):
         paginator = OffsetPaginator()
@@ -156,15 +156,15 @@ class TestOffsetPaginator(object):
         paginator = OffsetPaginator()
         with pytest.raises(errors.InvalidPageValue) as exc_info:
             paginator.paginate({'limit': '0'})
-        assert exc_info.value.param == 'limit'
-        assert exc_info.value.message == 'limit must be at least 1'
+        assert exc_info.value.source_parameter == 'page[limit]'
+        assert exc_info.value.detail == 'limit must be at least 1'
 
     def test_too_high_limit_raises_error(self):
         paginator = OffsetPaginator()
         with pytest.raises(errors.InvalidPageValue) as exc_info:
             paginator.paginate({'limit': '101'})
-        assert exc_info.value.param == 'limit'
-        assert exc_info.value.message == (
+        assert exc_info.value.source_parameter == 'page[limit]'
+        assert exc_info.value.detail == (
             'limit cannot exceed maximum page size of 100'
         )
 
@@ -172,22 +172,22 @@ class TestOffsetPaginator(object):
         paginator = OffsetPaginator()
         with pytest.raises(errors.InvalidPageValue) as exc_info:
             paginator.paginate({'offset': '-1'})
-        assert exc_info.value.param == 'offset'
-        assert exc_info.value.message == 'offset must be at least 0'
+        assert exc_info.value.source_parameter == 'page[offset]'
+        assert exc_info.value.detail == 'offset must be at least 0'
 
     def test_invalid_offset_type(self):
         paginator = OffsetPaginator()
         with pytest.raises(errors.InvalidPageValue) as exc_info:
             paginator.paginate({'offset': 'foobar'})
-        assert exc_info.value.param == 'offset'
-        assert exc_info.value.message == 'offset must be an integer'
+        assert exc_info.value.source_parameter == 'page[offset]'
+        assert exc_info.value.detail == 'offset must be an integer'
 
     def test_invalid_limit_type(self):
         paginator = OffsetPaginator()
         with pytest.raises(errors.InvalidPageValue) as exc_info:
             paginator.paginate({'limit': 'foobar'})
-        assert exc_info.value.param == 'limit'
-        assert exc_info.value.message == 'limit must be an integer'
+        assert exc_info.value.source_parameter == 'page[limit]'
+        assert exc_info.value.detail == 'limit must be an integer'
 
     def test_invalid_params(self):
         paginator = OffsetPaginator()
@@ -198,9 +198,9 @@ class TestOffsetPaginator(object):
 class TestPagedPaginator(object):
     def test_extra_parameters_raises_error(self):
         paginator = PagedPaginator()
-        with pytest.raises(errors.InvalidPageParameters) as exc_info:
+        with pytest.raises(errors.InvalidPageParameter) as exc_info:
             paginator.paginate({'foo': 'bar'})
-        assert exc_info.value.params == {'foo'}
+        assert exc_info.value.source_parameter == 'page[foo]'
 
     def test_defaults(self):
         paginator = PagedPaginator()
@@ -212,13 +212,13 @@ class TestPagedPaginator(object):
         paginator = PagedPaginator()
         with pytest.raises(errors.InvalidPageValue) as exc_info:
             paginator.paginate({'size': '0'})
-        assert exc_info.value.message == 'size must be at least 1'
+        assert exc_info.value.detail == 'size must be at least 1'
 
     def test_too_high_size_raises_error(self):
         paginator = PagedPaginator()
         with pytest.raises(errors.InvalidPageValue) as exc_info:
             paginator.paginate({'size': '101'})
-        assert exc_info.value.message == (
+        assert exc_info.value.detail == (
             'size cannot exceed maximum page size of 100'
         )
 
@@ -226,19 +226,19 @@ class TestPagedPaginator(object):
         paginator = PagedPaginator()
         with pytest.raises(errors.InvalidPageValue) as exc_info:
             paginator.paginate({'number': '0'})
-        assert exc_info.value.message == 'number must be at least 1'
+        assert exc_info.value.detail == 'number must be at least 1'
 
     def test_invalid_number_type(self):
         paginator = PagedPaginator()
         with pytest.raises(errors.InvalidPageValue) as exc_info:
             paginator.paginate({'number': 'foobar'})
-        assert exc_info.value.message == 'number must be an integer'
+        assert exc_info.value.detail == 'number must be an integer'
 
     def test_invalid_size_type(self):
         paginator = PagedPaginator()
         with pytest.raises(errors.InvalidPageValue) as exc_info:
             paginator.paginate({'size': 'foobar'})
-        assert exc_info.value.message == 'size must be an integer'
+        assert exc_info.value.detail == 'size must be an integer'
 
     def test_invalid_params(self):
         paginator = PagedPaginator()

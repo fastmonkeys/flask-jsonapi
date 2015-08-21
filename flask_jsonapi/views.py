@@ -1,6 +1,6 @@
-from flask import Blueprint, current_app, jsonify
-from werkzeug.exceptions import BadRequest
 from werkzeug.local import LocalProxy
+
+from flask import Blueprint, current_app, jsonify
 
 from . import errors
 
@@ -15,9 +15,7 @@ def set_response_content_type(response):
 
 @blueprint.errorhandler(errors.Error)
 def handle_request_error(error):
-    statuses = {e['status'] for e in error.errors}
-    status = statuses.pop() if len(statuses) == 1 else BadRequest.code
-    return jsonify(errors=error.errors), status
+    return jsonify(errors=[error.as_dict]), error.status
 
 
 controller = LocalProxy(lambda: current_app.extensions['jsonapi'].controller)

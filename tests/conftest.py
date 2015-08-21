@@ -3,12 +3,12 @@ import os
 from datetime import date, datetime
 
 import pytest
-from bunch import Bunch
-from flask import Flask, Response
-from flask.json import JSONEncoder as _JSONEncoder
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import import_string
 
+from bunch import Bunch
+from flask import Flask, Response
+from flask.json import JSONEncoder as _JSONEncoder
 from flask_jsonapi import JSONAPI
 from flask_jsonapi.resource import Resource
 from flask_jsonapi.store.sqlalchemy import SQLAlchemyStore
@@ -161,6 +161,9 @@ def fantasy_database(db, models):
     for table in reversed(db.metadata.sorted_tables):
         db.session.execute('DROP TABLE {0} CASCADE'.format(table.name))
     db.session.commit()
+
+    db.session.close_all()
+    db.engine.dispose()
 
 
 @pytest.fixture

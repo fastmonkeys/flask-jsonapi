@@ -35,7 +35,7 @@ class TestResourceNotFound(object):
         assert response.status_code == 404
 
     def test_returns_resource_not_found_error(self, response):
-        assert response.json['errors'][0]['code'] == 'RESOURCE_NOT_FOUND'
+        assert response.json['errors'][0]['code'] == 'ResourceNotFound'
 
 
 class TestIncludeRelatedResources(object):
@@ -74,7 +74,7 @@ class TestSparseFieldsets(object):
         )
 
 
-class TestRequestInvalidResource(object):
+class TestResourceTypeNotFound(object):
     @pytest.fixture
     def response(self, client):
         return client.get('/foobars/1')
@@ -83,4 +83,4 @@ class TestRequestInvalidResource(object):
         assert response.status_code == 404
 
     def test_returns_invalid_resource_error(self, response):
-        assert response.json['errors'][0]['code'] == 'INVALID_RESOURCE'
+        assert response.json['errors'][0]['code'] == 'ResourceTypeNotFound'

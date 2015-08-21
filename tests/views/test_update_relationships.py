@@ -76,7 +76,7 @@ class TestUpdateRelationshipWithInvalidJSON(object):
         assert response.status_code == 400
 
     def test_returns_invalid_json_error(self, response):
-        assert response.json['errors'][0]['code'] == 'INVALID_JSON'
+        assert response.json['errors'][0]['code'] == 'InvalidJSON'
 
 
 class TestUpdateRelationshipWithInvalidRequestBody(object):
@@ -92,7 +92,7 @@ class TestUpdateRelationshipWithInvalidRequestBody(object):
 
     def test_returns_validation_error(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'VALIDATION_ERROR'
+        assert error['code'] == 'ValidationError'
         assert error['detail'] == "'data' is a required property"
         assert error['source'] == {'pointer': '/'}
 
@@ -161,7 +161,7 @@ class TestRejectFullReplacement(object):
 
     def test_returns_validation_error(self, update_response):
         error = update_response.json['errors'][0]
-        assert error['code'] == 'FULL_REPLACEMENT_DISALLOWED'
+        assert error['code'] == 'FullReplacementDisallowed'
         assert error['detail'] == "Full replacement of books is not allowed."
         assert 'source' not in error
 
@@ -310,7 +310,7 @@ class TestCreateToManyRelationshipForResourceNotExisting(object):
 
     def test_returns_resource_not_found_error(self, update_response):
         error = update_response.json['errors'][0]
-        assert error['code'] == 'RESOURCE_NOT_FOUND'
+        assert error['code'] == 'ResourceNotFound'
         assert error['detail'] == (
             "The resource identified by (stores, 123) type-id pair "
             "could not be found."
@@ -338,7 +338,7 @@ class TestCreateToManyRelationshipWithConflictingType(object):
 
     def test_returns_type_mismatch_error(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'TYPE_MISMATCH'
+        assert error['code'] == 'TypeMismatch'
         assert error['detail'] == (
             'authors is not a valid type for this operation.'
         )
@@ -354,7 +354,7 @@ class TestCreateToManyRelationshipWithInvalidJSON(object):
         assert response.status_code == 400
 
     def test_returns_invalid_json_error(self, response):
-        assert response.json['errors'][0]['code'] == 'INVALID_JSON'
+        assert response.json['errors'][0]['code'] == 'InvalidJSON'
 
 
 class TestCreateToManyRelationshipWithInvalidRequestBody(object):
@@ -370,7 +370,7 @@ class TestCreateToManyRelationshipWithInvalidRequestBody(object):
 
     def test_returns_validation_error(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'VALIDATION_ERROR'
+        assert error['code'] == 'ValidationError'
         assert error['detail'] == "'data' is a required property"
         assert error['source'] == {'pointer': '/'}
 
@@ -538,7 +538,7 @@ class TestDeleteToManyRelationshipWithConflictingType(object):
 
     def test_returns_type_mismatch_error(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'TYPE_MISMATCH'
+        assert error['code'] == 'TypeMismatch'
         assert error['detail'] == (
             'authors is not a valid type for this operation.'
         )
@@ -554,7 +554,7 @@ class TestDeleteToManyRelationshipWithInvalidJSON(object):
         assert response.status_code == 400
 
     def test_returns_invalid_json_error(self, response):
-        assert response.json['errors'][0]['code'] == 'INVALID_JSON'
+        assert response.json['errors'][0]['code'] == 'InvalidJSON'
 
 
 class TestDeleteToManyRelationshipWithInvalidRequestBody(object):
@@ -570,6 +570,6 @@ class TestDeleteToManyRelationshipWithInvalidRequestBody(object):
 
     def test_returns_validation_error(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'VALIDATION_ERROR'
+        assert error['code'] == 'ValidationError'
         assert error['detail'] == "'data' is a required property"
         assert error['source'] == {'pointer': '/'}

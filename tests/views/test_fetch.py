@@ -112,7 +112,7 @@ class TestPagination(object):
         )
 
 
-class TestInvalidResource(object):
+class TestResourceTypeNotFound(object):
     @pytest.fixture
     def response(self, client):
         return client.get('/foobars')
@@ -120,5 +120,5 @@ class TestInvalidResource(object):
     def test_responds_with_404_status_code(self, response):
         assert response.status_code == 404
 
-    def test_returns_invalid_resource_error(self, response):
-        assert response.json['errors'][0]['code'] == 'INVALID_RESOURCE'
+    def test_returns_resource_type_not_found_error(self, response):
+        assert response.json['errors'][0]['code'] == 'ResourceTypeNotFound'

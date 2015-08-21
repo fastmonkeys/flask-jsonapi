@@ -80,7 +80,7 @@ class TestSuccessfulRequest(object):
         assert attributes['date_published'] == '1983-10-28'
 
 
-class TestInvalidResourceType(object):
+class TestResourceTypeNotFound(object):
     @pytest.fixture
     def response(self, client):
         return client.post('/foobars')
@@ -88,8 +88,8 @@ class TestInvalidResourceType(object):
     def test_responds_with_404_status_code(self, response):
         assert response.status_code == 404
 
-    def test_returns_invalid_resource_error(self, response):
-        assert response.json['errors'][0]['code'] == 'INVALID_RESOURCE'
+    def test_returns_resource_type_not_found_error(self, response):
+        assert response.json['errors'][0]['code'] == 'ResourceTypeNotFound'
 
 
 class TestInvalidJSON(object):
@@ -101,7 +101,9 @@ class TestInvalidJSON(object):
         assert response.status_code == 400
 
     def test_returns_invalid_json_error(self, response):
-        assert response.json['errors'][0]['code'] == 'INVALID_JSON'
+        error = response.json['errors'][0]
+        assert error['code'] == 'InvalidJSON'
+        assert error['detail'] == 'Expecting value: line 1 column 1 (char 0)'
 
 
 class TestInvalidRequestBody(object):
@@ -114,7 +116,7 @@ class TestInvalidRequestBody(object):
 
     def test_returns_validation_error(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'VALIDATION_ERROR'
+        assert error['code'] == 'ValidationError'
         assert error['detail'] == "'data' is a required property"
         assert error['source'] == {'pointer': '/'}
 
@@ -133,7 +135,7 @@ class TestConflictingType(object):
 
     def test_returns_type_mismatch_error(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'TYPE_MISMATCH'
+        assert error['code'] == 'TypeMismatch'
         assert error['detail'] == (
             "authors is not a valid type for this operation."
         )
@@ -155,7 +157,7 @@ class TestClientGeneratedIDsUnsupported(object):
 
     def test_returns_client_generated_ids_unsupported_error(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'CLIENT_GENERATED_IDS_UNSUPPORTED'
+        assert error['code'] == 'ClientGeneratedIDsUnsupported'
         assert error['detail'] == (
             'The server does not support creation of books resource with a '
             'client-generated ID.'
@@ -207,7 +209,7 @@ class TestConflictWhenUsingClientGeneratedID(object):
 
     def test_returns_resource_already_exists_error(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'RESOURCE_ALREADY_EXISTS'
+        assert error['code'] == 'ResourceAlreadyExists'
         assert error['detail'] == (
             'A resource with (authors, 1) type-id pair already exists.'
         )

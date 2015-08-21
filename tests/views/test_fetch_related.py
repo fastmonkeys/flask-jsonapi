@@ -142,7 +142,9 @@ class TestToManyRelationWithSparseFieldsets(object):
 class TestToManyRelationPagination(object):
     @pytest.fixture
     def response(self, client, fantasy_database):
-        return client.get('/stores/2/books?page%5Bnumber%5D=3&page%5Bsize%5D=5')
+        return client.get(
+            '/stores/2/books?page%5Bnumber%5D=3&page%5Bsize%5D=5'
+        )
 
     def test_responds_with_200_status_code(self, response):
         assert response.status_code == 200
@@ -183,7 +185,7 @@ class TestToManyRelationPagination(object):
         )
 
 
-class TestRequestInvalidResource(object):
+class TestResourceTypeNotFound(object):
     @pytest.fixture
     def response(self, client):
         return client.get('/foo/1/bar')
@@ -192,7 +194,7 @@ class TestRequestInvalidResource(object):
         assert response.status_code == 404
 
     def test_returns_invalid_resource_error(self, response):
-        assert response.json['errors'][0]['code'] == 'INVALID_RESOURCE'
+        assert response.json['errors'][0]['code'] == 'ResourceTypeNotFound'
 
 
 class TestResourceNotFound(object):
@@ -204,7 +206,7 @@ class TestResourceNotFound(object):
         assert response.status_code == 404
 
     def test_returns_invalid_resource_error(self, response):
-        assert response.json['errors'][0]['code'] == 'RESOURCE_NOT_FOUND'
+        assert response.json['errors'][0]['code'] == 'ResourceNotFound'
 
 
 class TestInvalidRelationship(object):
@@ -216,4 +218,4 @@ class TestInvalidRelationship(object):
         assert response.status_code == 404
 
     def test_returns_invalid_resource_error(self, response):
-        assert response.json['errors'][0]['code'] == 'RELATIONSHIP_NOT_FOUND'
+        assert response.json['errors'][0]['code'] == 'RelationshipNotFound'

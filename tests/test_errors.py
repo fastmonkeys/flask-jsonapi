@@ -1,224 +1,448 @@
+import pytest
+
 from flask_jsonapi import errors
 
 
-class TestInvalidResource(object):
-    def test_errors(self):
-        e = errors.InvalidResource('foobars')
-        assert e.errors == [
-            {
-                "code": 'INVALID_RESOURCE',
-                "status": 404,
-                "title": "Invalid resource",
-                "detail": "foobars is not a valid resource"
-            }
-        ]
+class TestError(object):
+    @pytest.fixture
+    def error(self):
+        return errors.Error()
+
+    def test_code(self, error):
+        assert error.code == 'Error'
+
+    def test_error_properties_are_null_by_default(self, error):
+        assert error.id is None
+        assert error.status is None
+        assert error.title is None
+        assert error.detail is None
+        assert error.source_pointer is None
+        assert error.source_parameter is None
+        assert error.meta is None
+
+    def test_source_when_no_pointer_or_parameter(self, error):
+        assert error.source is None
+
+    def test_source_when_error_has_pointer(self, error):
+        error.source_pointer = '/data'
+        assert error.source == {'pointer': '/data'}
+
+    def test_source_when_error_has_parameter(self, error):
+        error.source_parameter = '/data'
+        assert error.source == {'parameter': '/data'}
+
+    def test_as_dict(self, error):
+        error.title = 'Error title'
+        error.detail = 'Error detail'
+        assert error.as_dict == {
+            'code': 'Error',
+            'title': 'Error title',
+            'detail': 'Error detail'
+        }
+
+
+class TestResourceTypeNotFound(object):
+    @pytest.fixture
+    def error(self):
+        return errors.ResourceTypeNotFound(type='foobars')
+
+    def test_status(self, error):
+        assert error.status == '404'
+
+    def test_title(self, error):
+        assert error.title == 'Resource type not found'
+
+    def test_detail(self, error):
+        assert error.detail == 'foobars is not a valid resource type.'
 
 
 class TestResourceNotFound(object):
-    def test_errors(self):
-        e = errors.ResourceNotFound(type='books', id='123')
-        assert e.errors == [
-            {
-                "code": 'RESOURCE_NOT_FOUND',
-                "status": 404,
-                "title": "Resource not found",
-                "detail": (
-                    "The resource identified by (books, 123) type-id pair "
-                    "could not be found."
-                )
-            }
-        ]
+    @pytest.fixture
+    def error(self):
+        return errors.ResourceNotFound(type='books', id='123')
+
+    def test_status(self, error):
+        assert error.status == '404'
+
+    def test_title(self, error):
+        assert error.title == 'Resource not found'
+
+    def test_detail(self, error):
+        assert error.detail == (
+            'The resource identified by (books, 123) type-id pair '
+            'could not be found.'
+        )
+
+
+class TestRelationshipNotFound(object):
+    @pytest.fixture
+    def error(self):
+        return errors.RelationshipNotFound(type='books', relationship='foobar')
+
+    def test_status(self, error):
+        assert error.status == '404'
+
+    def test_title(self, error):
+        assert error.title == 'Relationship not found'
+
+    def test_detail(self, error):
+        assert error.detail == 'foobar is not a valid relationship for books.'
 
 
 class TestFieldTypeMissing(object):
-    def test_errors(self):
-        e = errors.FieldTypeMissing()
-        assert e.errors == [
-            {
-                "code": "FIELD_TYPE_MISSING",
-                "status": 400,
-                "title": "Field type missing",
-                "detail": "fields must specify a type.",
-                "source": {
-                    "parameter": "fields"
-                }
-            }
-        ]
+    @pytest.fixture
+    def error(self):
+        return errors.FieldTypeMissing()
+
+    def test_status(self, error):
+        assert error.status == '400'
+
+    def test_title(self, error):
+        assert error.title == 'Field type missing'
+
+    def test_detail(self, error):
+        assert error.detail == 'fields must specify a type.'
+
+    def test_source_parameter(self, error):
+        assert error.source_parameter == 'fields'
 
 
 class TestInvalidFieldFormat(object):
-    def test_errors(self):
-        e = errors.InvalidFieldFormat('books')
-        assert e.errors == [
-            {
-                "code": "INVALID_FIELD_FORMAT",
-                "status": 400,
-                "title": "Invalid field format",
-                "detail": (
-                    "The value of fields[books] parameter must be a "
-                    "comma-separated list that refers to the name(s) "
-                    "of the fields to be returned."
-                ),
-                "source": {
-                    "parameter": "fields[books]"
-                }
-            }
-        ]
+    @pytest.fixture
+    def error(self):
+        return errors.InvalidFieldFormat(type='books')
+
+    def test_status(self, error):
+        assert error.status == '400'
+
+    def test_title(self, error):
+        assert error.title == 'Invalid field format'
+
+    def test_detail(self, error):
+        assert error.detail == (
+            'The value of fields[books] parameter must be a '
+            'comma-separated list that refers to the name(s) '
+            'of the fields to be returned.'
+        )
+
+    def test_source_parameter(self, error):
+        assert error.source_parameter == 'fields[books]'
 
 
 class TestInvalidFieldType(object):
-    def test_errors(self):
-        e = errors.InvalidFieldType('foobars')
-        assert e.errors == [
-            {
-                "code": "INVALID_FIELD_TYPE",
-                "status": 400,
-                "title": "Invalid field",
-                "detail": "foobars is not a valid resource.",
-                "source": {
-                    "parameter": "fields[foobars]"
-                }
-            }
-        ]
+    @pytest.fixture
+    def error(self):
+        return errors.InvalidFieldType(type='foobars')
+
+    def test_status(self, error):
+        assert error.status == '400'
+
+    def test_title(self, error):
+        assert error.title == 'Invalid field'
+
+    def test_detail(self, error):
+        assert error.detail == 'foobars is not a valid resource type.'
+
+    def test_source_parameter(self, error):
+        assert error.source_parameter == 'fields[foobars]'
 
 
 class TestInvalidField(object):
-    def test_errors(self):
-        e = errors.InvalidField('books', 'foobar')
-        assert e.errors == [
-            {
-                "code": "INVALID_FIELD",
-                "status": 400,
-                "title": "Invalid field",
-                "detail": "foobar is not a valid field for books.",
-                "source": {
-                    "parameter": "fields[books]"
-                }
-            }
-        ]
+    @pytest.fixture
+    def error(self):
+        return errors.InvalidField(type='books', field='foobar')
+
+    def test_status(self, error):
+        assert error.status == '400'
+
+    def test_title(self, error):
+        assert error.title == 'Invalid field'
+
+    def test_detail(self, error):
+        assert error.detail == 'foobar is not a valid field for books.'
+
+    def test_source_parameter(self, error):
+        assert error.source_parameter == 'fields[books]'
 
 
 class TestInvalidIncludeFormat(object):
-    def test_errors(self):
-        e = errors.InvalidIncludeFormat()
-        assert e.errors == [
-            {
-                "code": "INVALID_INCLUDE_FORMAT",
-                "status": 400,
-                "title": "Invalid include format",
-                "detail": (
-                    "The value of include parameter must be a comma-separated "
-                    "list of relationship paths."
-                ),
-                "source": {
-                    "parameter": "include"
-                }
-            }
-        ]
+    @pytest.fixture
+    def error(self):
+        return errors.InvalidIncludeFormat()
+
+    def test_status(self, error):
+        assert error.status == '400'
+
+    def test_title(self, error):
+        assert error.title == 'Invalid include format'
+
+    def test_detail(self, error):
+        assert error.detail == (
+            'The value of include parameter must be a comma-separated '
+            'list of relationship paths.'
+        )
+
+    def test_source_parameter(self, error):
+        assert error.source_parameter == 'include'
 
 
 class TestInvalidInclude(object):
-    def test_errors(self):
-        e = errors.InvalidInclude('books', 'foobar')
-        assert e.errors == [
-            {
-                "code": "INVALID_INCLUDE",
-                "status": 400,
-                "title": "Invalid include",
-                "detail": "foobar is not a valid relationship of books.",
-                "source": {
-                    "parameter": "include"
-                }
-            }
-        ]
+    @pytest.fixture
+    def error(self):
+        return errors.InvalidInclude(type='books', relationship='foobar')
+
+    def test_status(self, error):
+        assert error.status == '400'
+
+    def test_title(self, error):
+        assert error.title == 'Invalid include'
+
+    def test_detail(self, error):
+        assert error.detail == 'foobar is not a valid relationship of books.'
+
+    def test_source_parameter(self, error):
+        assert error.source_parameter == 'include'
 
 
 class TestInvalidSortFormat(object):
-    def test_errors(self):
-        e = errors.InvalidSortFormat()
-        assert e.errors == [
-            {
-                "code": "INVALID_SORT_FORMAT",
-                "status": 400,
-                "title": "Invalid sort format",
-                "detail": (
-                    "The sort parameter must be a comma-separated list of "
-                    "sort fields."
-                ),
-                "source": {
-                    "parameter": "sort"
-                }
-            }
-        ]
+    @pytest.fixture
+    def error(self):
+        return errors.InvalidSortFormat()
+
+    def test_status(self, error):
+        assert error.status == '400'
+
+    def test_title(self, error):
+        assert error.title == 'Invalid sort format'
+
+    def test_detail(self, error):
+        assert error.detail == (
+            'The sort parameter must be a comma-separated list of '
+            'sort fields.'
+        )
+
+    def test_source_parameter(self, error):
+        assert error.source_parameter == 'sort'
 
 
 class TestInvalidSortField(object):
-    def test_errors(self):
-        e = errors.InvalidSortField('books', 'foobar')
-        assert e.errors == [
-            {
-                "code": "INVALID_SORT_FIELD",
-                "status": 400,
-                "title": "Invalid sort field",
-                "detail": "foobar is not a sortable field for books",
-                "source": {
-                    "parameter": "sort"
-                }
-            }
-        ]
+    @pytest.fixture
+    def error(self):
+        return errors.InvalidSortField(type='books', field='foobar')
+
+    def test_status(self, error):
+        assert error.status == '400'
+
+    def test_title(self, error):
+        assert error.title == 'Invalid sort field'
+
+    def test_detail(self, error):
+        assert error.detail == 'foobar is not a sortable field for books.'
+
+    def test_source_parameter(self, error):
+        assert error.source_parameter == 'sort'
 
 
 class TestInvalidPageFormat(object):
-    def test_errors(self):
-        e = errors.InvalidPageFormat()
-        assert e.errors == [
-            {
-                "status": 400,
-                "code": "INVALID_PAGE_FORMAT",
-                "title": "Invalid page format",
-                "source": {
-                    "parameter": "page"
-                }
-            }
-        ]
+    @pytest.fixture
+    def error(self):
+        return errors.InvalidPageFormat()
+
+    def test_status(self, error):
+        assert error.status == '400'
+
+    def test_title(self, error):
+        assert error.title == 'Invalid page format'
+
+    def test_source_parameter(self, error):
+        assert error.source_parameter == 'page'
 
 
-class TestInvalidPageParameters(object):
-    def test_errors(self):
-        e = errors.InvalidPageParameters({'foo', 'bar'})
-        assert e.errors == [
-            {
-                "status": 400,
-                "code": "INVALID_PAGE_PARAMETER",
-                "title": "Invalid page parameter",
-                "detail": "bar is not a valid page parameter",
-                "source": {
-                    "parameter": "page[bar]"
-                }
-            },
-            {
-                "status": 400,
-                "code": "INVALID_PAGE_PARAMETER",
-                "title": "Invalid page parameter",
-                "detail": "foo is not a valid page parameter",
-                "source": {
-                    "parameter": "page[foo]"
-                }
-            },
-        ]
+class TestInvalidPageParameter(object):
+    @pytest.fixture
+    def error(self):
+        return errors.InvalidPageParameter(param='foo')
+
+    def test_status(self, error):
+        assert error.status == '400'
+
+    def test_title(self, error):
+        assert error.title == 'Invalid page parameter'
+
+    def test_detail(self, error):
+        assert error.detail == 'foo is not a valid page parameter.'
+
+    def test_source_parameter(self, error):
+        assert error.source_parameter == 'page[foo]'
 
 
 class TestInvalidPageValue(object):
-    def test_errors(self):
-        e = errors.InvalidPageValue('offset', 'offset must be at least 0')
-        assert e.errors == [
-            {
-                "status": 400,
-                "code": 'INVALID_PAGE_VALUE',
-                "title": "Invalid page value",
-                "detail": "offset must be at least 0",
-                "source": {
-                    "parameter": "page[offset]"
-                }
-            }
-        ]
+    @pytest.fixture
+    def error(self):
+        return errors.InvalidPageValue(
+            param='offset',
+            detail='offset must be at least 0'
+        )
+
+    def test_status(self, error):
+        assert error.status == '400'
+
+    def test_title(self, error):
+        assert error.title == 'Invalid page value'
+
+    def test_detail(self, error):
+        assert error.detail == 'offset must be at least 0'
+
+    def test_source_parameter(self, error):
+        assert error.source_parameter == 'page[offset]'
+
+
+class TestParameterNotAllowed(object):
+    @pytest.fixture
+    def error(self):
+        return errors.ParameterNotAllowed(source_parameter='foo')
+
+    def test_status(self, error):
+        assert error.status == '400'
+
+    def test_title(self, error):
+        assert error.title == 'Parameter not allowed'
+
+    def test_detail(self, error):
+        assert error.detail == 'foo is not a valid parameter.'
+
+    def test_source_parameter(self, error):
+        assert error.source_parameter == 'foo'
+
+
+class TestInvalidJSON(object):
+    @pytest.fixture
+    def error(self):
+        return errors.InvalidJSON(
+            detail='Expecting object: line 1 column 1 (char 0)'
+        )
+
+    def test_status(self, error):
+        assert error.status == '400'
+
+    def test_title(self, error):
+        assert error.title == 'Request body is not valid JSON'
+
+    def test_detail(self, error):
+        assert error.detail == 'Expecting object: line 1 column 1 (char 0)'
+
+
+class TestValidationError(object):
+    @pytest.fixture
+    def error(self):
+        return errors.ValidationError(
+            detail='data must be an object',
+            source_pointer='/data'
+        )
+
+    def test_status(self, error):
+        assert error.status == '400'
+
+    def test_title(self, error):
+        assert error.title == 'Validation error'
+
+    def test_detail(self, error):
+        assert error.detail == 'data must be an object'
+
+    def test_source_pointer(self, error):
+        assert error.source_pointer == '/data'
+
+
+class TestTypeMismatch(object):
+    @pytest.fixture
+    def error(self):
+        return errors.TypeMismatch(type='foobar', source_pointer='/data/type')
+
+    def test_status(self, error):
+        assert error.status == '409'
+
+    def test_title(self, error):
+        assert error.title == 'Type mismatch'
+
+    def test_detail(self, error):
+        assert error.detail == 'foobar is not a valid type for this operation.'
+
+    def test_source_pointer(self, error):
+        assert error.source_pointer == '/data/type'
+
+
+class TestIDMismatch(object):
+    @pytest.fixture
+    def error(self):
+        return errors.IDMismatch(id='123')
+
+    def test_status(self, error):
+        assert error.status == '409'
+
+    def test_title(self, error):
+        assert error.title == 'ID mismatch'
+
+    def test_detail(self, error):
+        assert error.detail == '123 does not match the endpoint id.'
+
+    def test_source_pointer(self, error):
+        assert error.source_pointer == '/data/id'
+
+
+class TestFullReplacementDisallowed(object):
+    @pytest.fixture
+    def error(self):
+        return errors.FullReplacementDisallowed(
+            relationship='books',
+            source_pointer='/data/relationships/books'
+        )
+
+    def test_status(self, error):
+        assert error.status == '403'
+
+    def test_title(self, error):
+        assert error.title == 'Full replacement disallowed'
+
+    def test_detail(self, error):
+        assert error.detail == 'Full replacement of books is not allowed.'
+
+    def test_source_pointer(self, error):
+        assert error.source_pointer == '/data/relationships/books'
+
+
+class TestClientGeneratedIDsUnsupported(object):
+    @pytest.fixture
+    def error(self):
+        return errors.ClientGeneratedIDsUnsupported(type='books')
+
+    def test_status(self, error):
+        assert error.status == '403'
+
+    def test_title(self, error):
+        assert error.title == 'Client-generated IDs unsupported'
+
+    def test_detail(self, error):
+        assert error.detail == (
+            'The server does not support creation of books resource '
+            'with a client-generated ID.'
+        )
+
+    def test_source_pointer(self, error):
+        return error.source_pointer == '/data/id'
+
+
+class TestResourceAlreadyExists(object):
+    @pytest.fixture
+    def error(self):
+        return errors.ResourceAlreadyExists(type='books', id='1')
+
+    def test_status(self, error):
+        assert error.status == '409'
+
+    def test_title(self, error):
+        assert error.title == 'Resource already exists'
+
+    def test_detail(self, error):
+        assert error.detail == (
+            'A resource with (books, 1) type-id pair already exists.'
+        )

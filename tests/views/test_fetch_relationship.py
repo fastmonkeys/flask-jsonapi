@@ -91,7 +91,7 @@ class TestFetchEmptyToManyRelationship(object):
         assert response.json['data'] == []
 
 
-class TestInvalidResourceType(object):
+class TestResourceTypeNotFound(object):
     @pytest.fixture
     def response(self, client, fantasy_database):
         return client.get('/foobars/1/relationships/author')
@@ -99,10 +99,10 @@ class TestInvalidResourceType(object):
     def test_responds_with_404_status_code(self, response):
         assert response.status_code == 404
 
-    def test_returns_invalid_resource_error(self, response):
+    def test_returns_resource_type_not_found(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'INVALID_RESOURCE'
-        assert error['detail'] == 'foobars is not a valid resource'
+        assert error['code'] == 'ResourceTypeNotFound'
+        assert error['detail'] == 'foobars is not a valid resource type.'
 
 
 class TestResourceNotFound(object):
@@ -115,14 +115,14 @@ class TestResourceNotFound(object):
 
     def test_returns_invalid_resource_error(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'RESOURCE_NOT_FOUND'
+        assert error['code'] == 'ResourceNotFound'
         assert error['detail'] == (
             "The resource identified by (books, 123123) type-id pair "
             "could not be found."
         )
 
 
-class TestInvalidRelationship(object):
+class TestRelationshipNotFound(object):
     @pytest.fixture
     def response(self, client):
         return client.get('/books/1/relationships/foobar')
@@ -130,9 +130,9 @@ class TestInvalidRelationship(object):
     def test_responds_with_404_status_code(self, response):
         assert response.status_code == 404
 
-    def test_returns_invalid_resource_error(self, response):
+    def test_returns_relationship_not_found(self, response):
         error = response.json['errors'][0]
-        assert error['code'] == 'RELATIONSHIP_NOT_FOUND'
+        assert error['code'] == 'RelationshipNotFound'
         assert error['detail'] == (
             'foobar is not a valid relationship for books.'
         )
