@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from . import errors
 
 
@@ -82,7 +84,7 @@ class IncludeParameter(object):
         self._resource = resource
         self.raw = include
         self.paths = self._parse_paths()
-        self.tree = {}
+        self.tree = OrderedDict()
         self._build_tree()
 
     def _build_tree(self):
@@ -103,7 +105,7 @@ class IncludeParameter(object):
         resource = self._resource
         for name in path:
             if name not in current_node:
-                current_node[name] = {}
+                current_node[name] = OrderedDict()
             try:
                 relationship = resource.relationships[name]
             except KeyError:

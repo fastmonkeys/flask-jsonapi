@@ -102,26 +102,27 @@ class Serializer(object):
     def _dump_relationship_object(self, model, relationship_name):
         resource = self._get_resource(model)
         relationship = resource.relationships[relationship_name]
-        related = resource.store.get_related(model, relationship_name)
-        if relationship.many:
-            data = [self._dump_resource_identifier(m) for m in related]
-        else:
-            data = self._dump_resource_identifier(related)
-        return {
-            "links": {
-                "self": link_builder.build_relationship_url(
-                    type=resource.type,
-                    id=resource.store.get_id(model),
-                    relationship=relationship.name
-                ),
-                "related": link_builder.build_related_url(
-                    type=resource.type,
-                    id=resource.store.get_id(model),
-                    relationship=relationship.name
-                ),
-            },
-            "data": data
+        relationship_object = {}
+        if relationship.allow_include:
+            related = resource.store.get_related(model, relationship_name)
+            if relationship.many:
+                data = [self._dump_resource_identifier(m) for m in related]
+            else:
+                data = self._dump_resource_identifier(related)
+            relationship_object['data'] = data
+        relationship_object['links'] = {
+            "self": link_builder.build_relationship_url(
+                type=resource.type,
+                id=resource.store.get_id(model),
+                relationship=relationship.name
+            ),
+            "related": link_builder.build_related_url(
+                type=resource.type,
+                id=resource.store.get_id(model),
+                relationship=relationship.name
+            ),
         }
+        return relationship_object
 
     def _dump_resource_identifier(self, model):
         if model is not None:

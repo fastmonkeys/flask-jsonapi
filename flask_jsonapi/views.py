@@ -1,6 +1,5 @@
-from werkzeug.local import LocalProxy
-
 from flask import Blueprint, current_app, jsonify
+from werkzeug.local import LocalProxy
 
 from . import errors
 

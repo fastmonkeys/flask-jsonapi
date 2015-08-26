@@ -3,12 +3,12 @@ import os
 from datetime import date, datetime
 
 import pytest
+from flask import Flask, Response
+from flask.json import JSONEncoder as _JSONEncoder
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import import_string
 
 from bunch import Bunch
-from flask import Flask, Response
-from flask.json import JSONEncoder as _JSONEncoder
 from flask_jsonapi import JSONAPI
 from flask_jsonapi.resource import Resource
 from flask_jsonapi.store.sqlalchemy import SQLAlchemyStore
@@ -77,6 +77,7 @@ def jsonapi(app, controller_class, db, models):
         store=SQLAlchemyStore(db.session),
     )
     series.add_attribute('title')
+    series.add_relationship('books', allow_include=True)
 
     authors = Resource(
         type='authors',

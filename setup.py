@@ -28,12 +28,14 @@ setup(
     install_requires=[
         'Flask',
         'Flask-SQLAlchemy',
+        'jsonschema',
         'SQLAlchemy>=1.0',
-        'qstring',
+        'qstring'
     ],
     extras_require={
         'tests': [
             'bunch',
+            'psycopg2'
         ],
     },
     package_data={
