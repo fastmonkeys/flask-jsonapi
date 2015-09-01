@@ -12,6 +12,11 @@ def get_resource_object_schema(resource, for_update):
     required = ['type']
     if for_update:
         required.append('id')
+    else:
+        if any(resource.required_attributes):
+            required.append('attributes')
+        if any(resource.required_relationships):
+            required.append('relationships')
     return {
         'type': 'object',
         'required': required,
@@ -36,11 +41,7 @@ def get_attributes_object_schema(resource, for_update):
         },
         'additionalProperties': False
     }
-    required = [
-        attribute.name
-        for attribute in resource.attributes.values()
-        if attribute.required
-    ]
+    required = [a.name for a in resource.required_attributes]
     if not for_update and required:
         schema['required'] = required
     return schema
@@ -55,11 +56,7 @@ def get_relationships_object_schema(resource, for_update):
         },
         'additionalProperties': False
     }
-    required = [
-        relationship.name
-        for relationship in resource.relationships.values()
-        if relationship.required
-    ]
+    required = [r.name for r in resource.required_relationships]
     if not for_update and required:
         schema['required'] = required
     return schema
@@ -69,34 +66,31 @@ def get_relationship_object_schema(relationship):
     if relationship.many:
         definition = {
             'type': 'array',
-            'items': {
-                'type': 'object',
-                'required': [
-                    'type',
-                    'id'
-                ],
-                'properties': {
-                    'type': {'type': 'string'},
-                    'id': {'type': 'string'}
-                }
-            }
+            'items': get_resource_identifier_object_schema()
         }
     else:
-        definition = {
-            'type': ['null', 'object'],
-            'required': [
-                'type',
-                'id'
-            ],
-            'properties': {
-                'type': {'type': 'string'},
-                'id': {'type': 'string'}
-            }
-        }
+        definition = get_resource_identifier_object_schema(allow_null=True)
     return {
         'type': 'object',
         'required': ['data'],
         'properties': {
             'data': definition
+        }
+    }
+
+
+def get_resource_identifier_object_schema(allow_null=False):
+    type_ = ['object']
+    if allow_null:
+        type_.append('null')
+    return {
+        'type': type_,
+        'required': [
+            'type',
+            'id'
+        ],
+        'properties': {
+            'type': {'type': 'string'},
+            'id': {'type': 'string'}
         }
     }

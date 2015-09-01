@@ -33,6 +33,18 @@ class Resource(object):
             )
         self.fields[field.name] = field
 
+    @property
+    def required_attributes(self):
+        for attribute in self.attributes.values():
+            if attribute.required:
+                yield attribute
+
+    @property
+    def required_relationships(self):
+        for relationship in self.relationships.values():
+            if relationship.required:
+                yield relationship
+
     def register(self, registry):
         if self._registry is not None:
             raise exceptions.ResourceAlreadyRegistered(
