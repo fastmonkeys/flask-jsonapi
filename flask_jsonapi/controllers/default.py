@@ -1,8 +1,8 @@
+from flask import abort, current_app, json, request
 from werkzeug.urls import url_encode
 
 import jsonschema
 import qstring
-from flask import abort, current_app, json, request
 
 from .. import errors, exceptions, link_builder, schemas
 from ..params import Parameters
@@ -194,7 +194,7 @@ class DefaultController(object):
         return fields
 
     def _validate_create_request(self, resource, payload):
-        schema = schemas.get_create_request_schema(resource)
+        schema = schemas.get_top_level_schema(resource, for_update=False)
         self._validate(payload, schema)
         data = payload['data']
         type_ = data['type']
@@ -204,7 +204,7 @@ class DefaultController(object):
             raise errors.ClientGeneratedIDsUnsupported(type_)
 
     def _validate_update_request(self, resource, id, payload):
-        schema = schemas.get_update_request_schema(resource)
+        schema = schemas.get_top_level_schema(resource, for_update=True)
         self._validate(payload, schema)
         data = payload['data']
         if data['type'] != resource.type:
@@ -216,7 +216,7 @@ class DefaultController(object):
             raise errors.IDMismatch(data['id'])
 
     def _validate_update_relationship_request(self, relationship, payload):
-        schema = schemas.get_update_relationship_request_schema(relationship)
+        schema = schemas.get_relationship_object_schema(relationship)
         self._validate(payload, schema)
 
     def _parse_relationships(self, resource, relationships, source_pointer):

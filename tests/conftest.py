@@ -6,6 +6,7 @@ import pytest
 from flask import Flask, Response
 from flask.json import JSONEncoder as _JSONEncoder
 from flask_sqlalchemy import SQLAlchemy
+from voluptuous import All, Any, Length, Schema
 from werkzeug.utils import import_string
 
 from bunch import Bunch
@@ -33,6 +34,10 @@ class JSONEncoder(_JSONEncoder):
         if isinstance(o, date):
             return o.isoformat()
         return JSONEncoder.default(self, o)
+
+
+def Date(fmt='%Y-%m-%d'):
+    return lambda v: datetime.strptime(v, fmt)
 
 
 @pytest.yield_fixture
@@ -76,7 +81,11 @@ def jsonapi(app, controller_class, db, models):
         model_class=models.Series,
         store=SQLAlchemyStore(db.session),
     )
-    series.add_attribute('title')
+    series.add_attribute(
+        'title',
+        required=True,
+        validator=Schema(All(str, Length(min=1)))
+    )
     series.add_relationship('books', allow_include=True)
 
     authors = Resource(
@@ -85,9 +94,20 @@ def jsonapi(app, controller_class, db, models):
         store=SQLAlchemyStore(db.session),
     )
     authors.allow_client_generated_ids = True
-    authors.add_attribute('name')
-    authors.add_attribute('date_of_birth')
-    authors.add_attribute('date_of_death')
+    authors.add_attribute(
+        'name',
+        required=True,
+        validator=Schema(All(str, Length(min=1)))
+    )
+    authors.add_attribute(
+        'date_of_birth',
+        required=True,
+        validator=Schema(Date)
+    )
+    authors.add_attribute(
+        'date_of_death',
+        validator=Schema(Any(Date, None))
+    )
     authors.add_relationship('books')
 
     books = Resource(
@@ -95,32 +115,52 @@ def jsonapi(app, controller_class, db, models):
         model_class=models.Book,
         store=SQLAlchemyStore(db.session),
     )
-    books.add_attribute('date_published')
-    books.add_attribute('title')
-    books.add_relationship('author')
+    books.add_attribute(
+        'title',
+        required=True,
+        validator=Schema(All(str, Length(min=1)))
+    )
+    books.add_attribute(
+        'date_published',
+        required=True,
+        validator=Schema(Date)
+    )
+    books.add_relationship(
+        'author',
+        required=True,
+        validator=Schema(models.Author)
+    )
     books.add_relationship(
         'chapters',
         allow_include=True,
         allow_full_replacement=True
     )
     books.add_relationship('series')
-    books.add_relationship('stores', allow_full_replacement=True)
+    books.add_relationship(
+        'stores',
+        allow_include=True,
+        allow_full_replacement=True
+    )
 
     chapters = Resource(
         type='chapters',
         model_class=models.Chapter,
         store=SQLAlchemyStore(db.session),
     )
-    chapters.add_attribute('title')
-    chapters.add_attribute('ordering')
-    chapters.add_relationship('book')
+    chapters.add_attribute(
+        'title',
+        required=True,
+        validator=Schema(All(str, Length(min=1)))
+    )
+    chapters.add_attribute('ordering', validator=Schema(int))
+    chapters.add_relationship('book') ### REQUIRED
 
     stores = Resource(
         type='stores',
         model_class=models.Store,
         store=SQLAlchemyStore(db.session),
     )
-    stores.add_attribute('name')
+    stores.add_attribute('name', validator=Schema(All(str, Length(min=1))))
     stores.add_relationship('books')
 
     jsonapi.resources.register(series)

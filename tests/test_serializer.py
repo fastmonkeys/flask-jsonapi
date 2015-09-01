@@ -98,7 +98,10 @@ def test_single_resource(jsonapi, resource_registry, book, db):
                             "http://example.com/books/11/relationships/stores"
                         ),
                         "related": "http://example.com/books/11/stores"
-                    }
+                    },
+                    "data": [
+                        {"type": "stores", "id": "2"}
+                    ]
                 }
             }
         }

@@ -5,6 +5,8 @@ from . import errors
 
 blueprint = Blueprint('jsonapi', __name__)
 
+controller = LocalProxy(lambda: current_app.extensions['jsonapi'].controller)
+
 
 @blueprint.after_request
 def set_response_content_type(response):
@@ -15,9 +17,6 @@ def set_response_content_type(response):
 @blueprint.errorhandler(errors.Error)
 def handle_request_error(error):
     return jsonify(errors=[error.as_dict]), error.status
-
-
-controller = LocalProxy(lambda: current_app.extensions['jsonapi'].controller)
 
 
 @blueprint.route('/<type>', methods=['GET'])

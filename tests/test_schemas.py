@@ -11,7 +11,7 @@ class TestCreateRequestValidation(object):
 
     @pytest.fixture
     def schema(self, resource):
-        return schemas.get_create_request_schema(resource)
+        return schemas.get_top_level_schema(resource, for_update=False)
 
     def test_must_be_an_object(self, schema):
         with pytest.raises(jsonschema.ValidationError) as excinfo:
@@ -70,7 +70,8 @@ class TestCreateRequestValidation(object):
                 'data': {
                     'type': 'books',
                     'attributes': {
-                        'title': 'The Hobbit'
+                        'title': 'The Hobbit',
+                        'date_published': '1937-09-21'
                     }
                 }
             },
@@ -84,6 +85,8 @@ class TestCreateRequestValidation(object):
                     'data': {
                         'type': 'books',
                         'attributes': {
+                            'title': 'The Hobbit',
+                            'date_published': '1937-09-21',
                             'foo': 'bar'
                         }
                     }
@@ -218,6 +221,9 @@ class TestCreateRequestValidation(object):
                 'data': {
                     'type': 'books',
                     'relationships': {
+                        'author': {
+                            'data': None
+                        },
                         'chapters': {
                             "data": []
                         }
@@ -235,6 +241,9 @@ class TestCreateRequestValidation(object):
                 'data': {
                     'type': 'books',
                     'relationships': {
+                        'author': {
+                            'data': None
+                        },
                         'chapters': {
                             'data': [
                                 {'type': 'chapters', 'id': '1'},
@@ -254,6 +263,9 @@ class TestCreateRequestValidation(object):
                     'data': {
                         'type': 'books',
                         'relationships': {
+                            'author': {
+                                'data': None
+                            },
                             'chapters': {
                                 "data": None
                             }

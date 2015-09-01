@@ -30,12 +30,14 @@ setup(
         'Flask-SQLAlchemy',
         'jsonschema',
         'SQLAlchemy>=1.0',
-        'qstring'
+        'qstring>=0.2.0,<0.3.0',
     ],
     extras_require={
         'tests': [
             'bunch',
-            'psycopg2'
+            'psycopg2',
+            'sqlalchemy_json_api',
+            'voluptuous',
         ],
     },
     package_data={

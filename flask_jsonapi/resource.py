@@ -50,9 +50,11 @@ class Resource(object):
 
 
 class Field(object):
-    def __init__(self, parent_resource, name):
+    def __init__(self, parent_resource, name, required=False, validator=None):
         self.parent_resource = parent_resource
         self.name = name
+        self.required = required
+        self.validator = validator
         self._check_name()
 
     def _check_name(self):
@@ -74,10 +76,8 @@ class Attribute(Field):
 
 class Relationship(Field):
     def __init__(
-        self, parent_resource, name, allow_include=None,
-        allow_full_replacement=False
-    ):
-        super(Relationship, self).__init__(parent_resource, name)
+        self, parent_resource, name, allow_include=None, allow_full_replacement=False, **kwargs):
+        super(Relationship, self).__init__(parent_resource, name, **kwargs)
         self.many = self.parent_resource.store.is_to_many_relationship(
             self.parent_resource.model_class,
             self.name

@@ -1,91 +1,102 @@
-def get_update_request_schema(resource):
-    schema = get_create_request_schema(resource)
-    schema['definitions']['resource']['required'].append('id')
-    return schema
-
-
-def get_update_relationship_request_schema(relationship):
-    return _get_relationship_definition(relationship)
-
-
-def get_create_request_schema(resource):
+def get_top_level_schema(resource, for_update):
     return {
-        "definitions": {
-            "resource": {
-                "type": "object",
-                "required": ["type"],
-                "properties": {
-                    "type": {"type": "string"},
-                    "id": {"type": "string"},
-                    "attributes": {"$ref": "#/definitions/attributes"},
-                    "relationships": {"$ref": "#/definitions/relationships"}
-                }
-            },
-            "attributes": _get_attributes_definition(resource),
-            "relationships": _get_relationships_definition(resource)
-        },
-        "type": "object",
-        "required": ["data"],
-        "properties": {
-            "data": {"$ref": "#/definitions/resource"}
+        'type': 'object',
+        'required': ['data'],
+        'properties': {
+            'data': get_resource_object_schema(resource, for_update)
         }
     }
 
 
-def _get_attributes_definition(resource):
+def get_resource_object_schema(resource, for_update):
+    required = ['type']
+    if for_update:
+        required.append('id')
     return {
-        "type": "object",
-        "properties": {
+        'type': 'object',
+        'required': required,
+        'properties': {
+            'type': {'type': 'string'},
+            'id': {'type': 'string'},
+            'attributes': get_attributes_object_schema(resource, for_update),
+            'relationships': get_relationships_object_schema(
+                resource,
+                for_update
+            )
+        }
+    }
+
+
+def get_attributes_object_schema(resource, for_update):
+    schema = {
+        'type': 'object',
+        'properties': {
             attribute: {}
             for attribute in resource.attributes
         },
-        "additionalProperties": False
+        'additionalProperties': False
     }
+    required = [
+        attribute.name
+        for attribute in resource.attributes.values()
+        if attribute.required
+    ]
+    if not for_update and required:
+        schema['required'] = required
+    return schema
 
 
-def _get_relationships_definition(resource):
-    return {
-        "type": "object",
-        "properties": {
-            relationship.name: _get_relationship_definition(relationship)
+def get_relationships_object_schema(resource, for_update):
+    schema = {
+        'type': 'object',
+        'properties': {
+            relationship.name: get_relationship_object_schema(relationship)
             for relationship in resource.relationships.values()
         },
-        "additionalProperties": False
+        'additionalProperties': False
     }
+    required = [
+        relationship.name
+        for relationship in resource.relationships.values()
+        if relationship.required
+    ]
+    if not for_update and required:
+        schema['required'] = required
+    return schema
 
 
-def _get_relationship_definition(relationship):
+def get_relationship_object_schema(relationship):
     if relationship.many:
         definition = {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "required": [
-                    "type",
-                    "id"
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'required': [
+                    'type',
+                    'id'
                 ],
-                "properties": {
-                    "type": {"type": "string"},
-                    "id": {"type": "string"}
+                'properties': {
+                    'type': {'type': 'string'},
+                    'id': {'type': 'string'}
                 }
             }
         }
     else:
         definition = {
-            "type": ["null", "object"],
-            "required": [
-                "type",
-                "id"
+            'type': ['null', 'object'],
+            'required': [
+                'type',
+                'id'
             ],
-            "properties": {
-                "type": {"type": "string"},
-                "id": {"type": "string"}
+            'properties': {
+                'type': {'type': 'string'},
+                'id': {'type': 'string'}
             }
         }
     return {
-        "type": "object",
-        "required": ["data"],
-        "properties": {
-            "data": definition
+        'type': 'object',
+        'required': ['data'],
+        'properties': {
+            'data': definition
         }
     }

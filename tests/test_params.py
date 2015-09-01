@@ -7,7 +7,7 @@ from flask_jsonapi.params import FieldsParameter, IncludeParameter
 class TestFieldsParameter(object):
     def test_missing_fields_parameter(self, resource_registry):
         fields = FieldsParameter(resource_registry, fields=None)
-        assert fields['series'] == {'title'}
+        assert fields['series'] == {'books', 'title'}
         assert fields['authors'] == {
             'books',
             'date_of_birth',
