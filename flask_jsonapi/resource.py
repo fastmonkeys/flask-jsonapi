@@ -88,7 +88,13 @@ class Attribute(Field):
 
 class Relationship(Field):
     def __init__(
-        self, parent_resource, name, allow_include=None, allow_full_replacement=False, **kwargs):
+        self,
+        parent_resource,
+        name,
+        allow_include=None,
+        allow_full_replacement=False,
+        **kwargs
+    ):
         super(Relationship, self).__init__(parent_resource, name, **kwargs)
         self.many = self.parent_resource.store.is_to_many_relationship(
             self.parent_resource.model_class,

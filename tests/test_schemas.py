@@ -1,6 +1,6 @@
+import jsonschema
 import pytest
 
-import jsonschema
 from flask_jsonapi import schemas
 
 

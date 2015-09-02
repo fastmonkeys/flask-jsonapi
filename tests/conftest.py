@@ -3,13 +3,13 @@ import os
 from datetime import date, datetime
 
 import pytest
+from bunch import Bunch
 from flask import Flask, Response
 from flask.json import JSONEncoder as _JSONEncoder
 from flask_sqlalchemy import SQLAlchemy
 from voluptuous import All, Any, Length, Schema
 from werkzeug.utils import import_string
 
-from bunch import Bunch
 from flask_jsonapi import JSONAPI
 from flask_jsonapi.resource import Resource
 from flask_jsonapi.store.sqlalchemy import SQLAlchemyStore
@@ -237,10 +237,6 @@ def models(db):
         date_of_birth = db.Column(db.Date, nullable=False)
         date_of_death = db.Column(db.Date)
 
-        @db.validates('date_of_birth')
-        def validate_date_of_birth(self, key, date_of_birth):
-            return datetime.strptime(date_of_birth, '%Y-%m-%d').date()
-
     class Book(db.Model):
         __tablename__ = 'books'
         id = db.Column(db.Integer, primary_key=True)
@@ -254,10 +250,6 @@ def models(db):
         series = db.relationship(Series, backref='books')
         date_published = db.Column(db.Date, nullable=False)
         title = db.Column(db.Text)
-
-        @db.validates('date_published')
-        def validate_date_published(self, key, date_published):
-            return datetime.strptime(date_published, '%Y-%m-%d').date()
 
     class Chapter(db.Model):
         __tablename__ = 'chapters'
