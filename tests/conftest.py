@@ -10,7 +10,7 @@ from flask_sqlalchemy import SQLAlchemy
 from voluptuous import All, Any, Length, Schema
 from werkzeug.utils import import_string
 
-from flask_jsonapi import JSONAPI
+from flask_jsonapi import JSONAPI, _compat
 from flask_jsonapi.resource import Resource
 from flask_jsonapi.store.sqlalchemy import SQLAlchemyStore
 
@@ -37,7 +37,7 @@ class JSONEncoder(_JSONEncoder):
 
 
 def Date(fmt='%Y-%m-%d'):
-    return lambda v: datetime.strptime(v, fmt)
+    return lambda v: datetime.strptime(v, fmt).date()
 
 
 @pytest.yield_fixture
@@ -84,10 +84,15 @@ def jsonapi(app, controller_class, db, models):
     series.add_attribute(
         'title',
         required=True,
-        validator=Schema(All(str, Length(min=1)))
+        validator=Schema(All(_compat.string_types, Length(min=1)))
     )
     series.add_relationship('books', allow_include=True)
 
+    authors = Resource(
+        type='authors',
+        model_class=models.Author,
+        store=SQLAlchemyStore(db.session),
+    )
     authors = Resource(
         type='authors',
         model_class=models.Author,
@@ -97,16 +102,16 @@ def jsonapi(app, controller_class, db, models):
     authors.add_attribute(
         'name',
         required=True,
-        validator=Schema(All(str, Length(min=1)))
+        validator=Schema(All(_compat.string_types, Length(min=1)))
     )
     authors.add_attribute(
         'date_of_birth',
         required=True,
-        validator=Schema(Date)
+        validator=Schema(Date())
     )
     authors.add_attribute(
         'date_of_death',
-        validator=Schema(Any(Date, None))
+        validator=Schema(Any(Date(), None))
     )
     authors.add_relationship('books')
 
@@ -118,12 +123,12 @@ def jsonapi(app, controller_class, db, models):
     books.add_attribute(
         'title',
         required=True,
-        validator=Schema(All(str, Length(min=1)))
+        validator=Schema(All(_compat.string_types, Length(min=1)))
     )
     books.add_attribute(
         'date_published',
         required=True,
-        validator=Schema(Date)
+        validator=Schema(Date())
     )
     books.add_relationship(
         'author',
@@ -150,7 +155,7 @@ def jsonapi(app, controller_class, db, models):
     chapters.add_attribute(
         'title',
         required=True,
-        validator=Schema(All(str, Length(min=1)))
+        validator=Schema(All(_compat.string_types, Length(min=1)))
     )
     chapters.add_attribute('ordering', validator=Schema(int))
     chapters.add_relationship('book') ### REQUIRED
@@ -160,7 +165,10 @@ def jsonapi(app, controller_class, db, models):
         model_class=models.Store,
         store=SQLAlchemyStore(db.session),
     )
-    stores.add_attribute('name', validator=Schema(All(str, Length(min=1))))
+    stores.add_attribute(
+        'name',
+        validator=Schema(All(_compat.string_types, Length(min=1)))
+    )
     stores.add_relationship('books')
 
     jsonapi.resources.register(series)

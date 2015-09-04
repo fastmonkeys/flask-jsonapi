@@ -28,7 +28,6 @@ setup(
     install_requires=[
         'Flask',
         'Flask-SQLAlchemy',
-        'jsonschema',
         'SQLAlchemy>=1.0',
         'qstring>=0.2.0,<0.3.0',
     ],

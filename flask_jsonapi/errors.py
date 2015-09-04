@@ -42,6 +42,9 @@ class Error(Exception):
             for prop in properties if getattr(self, prop) is not None
         }
 
+    def __str__(self):
+        return self.detail
+
 
 class ResourceTypeNotFound(Error):
     status = '404'

@@ -3,11 +3,10 @@ from __future__ import absolute_import
 import sqlalchemy
 from sqlalchemy import orm
 
-from . import Store
 from .. import exceptions
 
 
-class SQLAlchemyStore(Store):
+class SQLAlchemyStore(object):
     def __init__(self, session):
         self.session = session
 
@@ -139,9 +138,6 @@ class SQLAlchemyStore(Store):
     def is_to_many_relationship(self, model_class, relationship):
         mapper = sqlalchemy.inspect(model_class)
         return mapper.relationships[relationship].uselist
-
-    def validate_attribute(self, model_class, attribute):
-        pass
 
     def validate_relationship(self, model_class, relationship):
         self._get_relationship_property(model_class, relationship)

@@ -1,11 +1,10 @@
+import qstring
 from flask import abort, current_app, json, request
 from werkzeug.urls import url_encode
 
-import jsonschema
-import qstring
-
-from .. import errors, exceptions, link_builder, schemas
+from .. import errors, exceptions, link_builder
 from ..params import Parameters
+from ..request_parser import RequestParser
 from ..serializer import Serializer
 
 
@@ -70,18 +69,16 @@ class DefaultController(object):
     def create(self, type):
         resource = self._get_resource(type)
         params = self._build_params(type)
-        payload = self._get_json()
-        self._validate_create_request(resource, payload)
-        data = payload['data']
-        id = data.get('id')
+        parser = RequestParser(resource=resource)
+        result = parser.parse(data=self._get_json())
         try:
             instance = resource.store.create(
                 model_class=resource.model_class,
-                id=id,
-                fields=self._parse_fields(resource, data)
+                id=result.id,
+                fields=result.fields
             )
         except exceptions.ObjectAlreadyExists:
-            raise errors.ResourceAlreadyExists(type=type, id=id)
+            raise errors.ResourceAlreadyExists(type=type, id=result.id)
         links = {
             'self': link_builder.build_individual_resource_url(
                 type=type,
@@ -98,15 +95,9 @@ class DefaultController(object):
         resource = self._get_resource(type)
         params = self._build_params(type)
         instance = self._fetch_object(resource, id)
-        payload = self._get_json()
-        self._validate_update_request(resource, id, payload)
-        resource.store.update(
-            instance=instance,
-            fields=self._parse_fields(
-                resource=resource,
-                data=payload['data']
-            )
-        )
+        parser = RequestParser(resource=resource, id=id)
+        result = parser.parse(data=self._get_json())
+        resource.store.update(instance=instance, fields=result.fields)
         links = self._get_links(params)
         return self._serialize(instance, params, links)
 
@@ -126,16 +117,14 @@ class DefaultController(object):
         instance = self._fetch_object(resource, id)
         if not relationship.many:
             abort(405)
-        payload = self._get_json()
-        self._validate_update_relationship_request(relationship, payload)
+        parser = RequestParser(resource=resource, id=id)
         resource.store.create_relationship(
             instance=instance,
             relationship=relationship.name,
-            values=self._parse_relationship(
-                resource=resource,
+            values=parser.parse_relationship_object(
                 relationship=relationship,
-                data=payload['data'],
-                source_pointer='/data'
+                data=self._get_json(),
+                path=[]
             )
         )
         return current_app.response_class(response='', status=204)
@@ -144,17 +133,15 @@ class DefaultController(object):
         resource = self._get_resource(type)
         relationship = self._get_relationship(resource, relationship)
         instance = self._fetch_object(resource, id)
-        payload = self._get_json()
-        self._validate_update_relationship_request(relationship, payload)
-        self._check_full_replacement(relationship, source_pointer=None)
+        parser = RequestParser(resource=resource, id=id)
         resource.store.update(
             instance=instance,
             fields={
-                relationship.name: self._parse_relationship(
-                    resource=resource,
+                relationship.name: parser.parse_relationship_object(
                     relationship=relationship,
-                    data=payload['data'],
-                    source_pointer='/data',
+                    data=self._get_json(),
+                    path=[],
+                    check_full_replacement=True
                 )
             }
         )
@@ -166,145 +153,18 @@ class DefaultController(object):
         instance = self._fetch_object(resource, id)
         if not relationship.many:
             abort(405)
-        payload = self._get_json()
-        self._validate_update_relationship_request(relationship, payload)
+        parser = RequestParser(resource=resource, id=id)
         resource.store.delete_relationship(
             instance=instance,
             relationship=relationship.name,
-            values=self._parse_relationship(
-                resource=resource,
+            values=parser.parse_relationship_object(
                 relationship=relationship,
-                data=payload['data'],
-                source_pointer='/data',
+                data=self._get_json(),
+                path=[],
                 ignore_not_found=True
             )
         )
         return current_app.response_class(response='', status=204)
-
-    def _parse_fields(self, resource, data):
-        fields = {}
-        fields.update(data.get('attributes', {}))
-        fields.update(
-            self._parse_relationships(
-                resource=resource,
-                relationships=data.get('relationships', {}),
-                source_pointer='/data/relationships'
-            )
-        )
-        return fields
-
-    def _validate_create_request(self, resource, payload):
-        schema = schemas.get_top_level_schema(resource, for_update=False)
-        self._validate(payload, schema)
-        data = payload['data']
-        type_ = data['type']
-        if type_ != resource.type:
-            raise errors.TypeMismatch(type=type_, source_pointer='/data/type')
-        if 'id' in data and not resource.allow_client_generated_ids:
-            raise errors.ClientGeneratedIDsUnsupported(type_)
-
-    def _validate_update_request(self, resource, id, payload):
-        schema = schemas.get_top_level_schema(resource, for_update=True)
-        self._validate(payload, schema)
-        data = payload['data']
-        if data['type'] != resource.type:
-            raise errors.TypeMismatch(
-                type=data['type'],
-                source_pointer='/data/type'
-            )
-        if data['id'] != id:
-            raise errors.IDMismatch(data['id'])
-
-    def _validate_update_relationship_request(self, relationship, payload):
-        schema = schemas.get_relationship_object_schema(relationship)
-        self._validate(payload, schema)
-
-    def _parse_relationships(self, resource, relationships, source_pointer):
-        relationships = [
-            (resource.relationships[relationship_name], value)
-            for relationship_name, value in relationships.items()
-        ]
-        for relationship, _ in relationships:
-            self._check_full_replacement(
-                relationship=relationship,
-                source_pointer=source_pointer + '/' + relationship.name
-            )
-        return {
-            relationship.name: self._parse_relationship(
-                resource=resource,
-                relationship=relationship,
-                data=value['data'],
-                source_pointer=(
-                    source_pointer + '/' + relationship.name + '/data'
-                )
-            )
-            for relationship, value in relationships
-        }
-
-    def _check_full_replacement(self, relationship, source_pointer):
-        if relationship.many and not relationship.allow_full_replacement:
-            raise errors.FullReplacementDisallowed(
-                relationship=relationship.name,
-                source_pointer=source_pointer
-            )
-
-    def _parse_relationship(
-        self, resource, relationship, data, source_pointer,
-        ignore_not_found=False
-    ):
-        if relationship.many:
-            return self._parse_linkages(
-                relationship,
-                linkages=data,
-                source_pointer=source_pointer,
-                ignore_not_found=ignore_not_found
-            )
-        else:
-            return self._parse_linkage(
-                relationship=relationship,
-                linkage=data,
-                source_pointer=source_pointer
-            )
-
-    def _parse_linkage(self, relationship, linkage, source_pointer):
-        if linkage is not None:
-            if linkage['type'] != relationship.type:
-                raise errors.TypeMismatch(
-                    type=linkage['type'],
-                    source_pointer=source_pointer + '/type'
-                )
-            return self._fetch_object(
-                resource=relationship.resource,
-                id=linkage['id'],
-                source_pointer=source_pointer
-            )
-
-    def _parse_linkages(
-        self, relationship, linkages, source_pointer, ignore_not_found=False
-    ):
-        objs = []
-        for i, linkage in enumerate(linkages):
-            try:
-                obj = self._parse_linkage(
-                    relationship=relationship,
-                    linkage=linkage,
-                    source_pointer=source_pointer + '/' + str(i)
-                )
-            except errors.ResourceNotFound:
-                if not ignore_not_found:
-                    raise
-            else:
-                objs.append(obj)
-        return objs
-
-    def _validate(self, payload, schema):
-        try:
-            jsonschema.validate(payload, schema)
-        except jsonschema.ValidationError as e:
-            raise errors.ValidationError(
-                detail=e.message,
-                source_pointer='/' + '/'.join(e.path)
-            )
 
     def _get_json(self):
         data = request.get_data()

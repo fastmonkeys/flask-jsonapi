@@ -163,7 +163,7 @@ class TestRejectFullReplacement(object):
         error = update_response.json['errors'][0]
         assert error['code'] == 'FullReplacementDisallowed'
         assert error['detail'] == "Full replacement of books is not allowed."
-        assert 'source' not in error
+        assert error['source']['pointer'] == '/'
 
 
 class TestCreateToManyRelationship(object):
