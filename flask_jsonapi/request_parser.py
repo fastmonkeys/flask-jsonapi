@@ -95,7 +95,7 @@ class RequestParser(object):
 
     def _parse_attribute(self, attribute, data, path):
         try:
-            return attribute.validate(data)
+            return attribute.validator(data)
         except errors.ValidationError as e:
             e.source_pointer = path.join
             raise

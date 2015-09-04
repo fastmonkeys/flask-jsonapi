@@ -11,7 +11,7 @@ from voluptuous import All, Any, Length, Schema
 from werkzeug.utils import import_string
 
 from flask_jsonapi import JSONAPI, _compat
-from flask_jsonapi.resource import Resource
+from flask_jsonapi.resource import Attribute, Relationship, Resource
 from flask_jsonapi.store.sqlalchemy import SQLAlchemyStore
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -80,96 +80,101 @@ def jsonapi(app, controller_class, db, models):
         type='series',
         model_class=models.Series,
         store=SQLAlchemyStore(db.session),
+        fields=[
+            Attribute(
+                'title',
+                required=True,
+                validator=Schema(All(_compat.string_types, Length(min=1)))
+            ),
+            Relationship('books', allow_include=True)
+        ]
     )
-    series.add_attribute(
-        'title',
-        required=True,
-        validator=Schema(All(_compat.string_types, Length(min=1)))
-    )
-    series.add_relationship('books', allow_include=True)
 
     authors = Resource(
         type='authors',
         model_class=models.Author,
         store=SQLAlchemyStore(db.session),
+        fields=[
+            Attribute(
+                'name',
+                required=True,
+                validator=Schema(All(_compat.string_types, Length(min=1)))
+            ),
+            Attribute(
+                'date_of_birth',
+                required=True,
+                validator=Schema(Date())
+            ),
+            Attribute(
+                'date_of_death',
+                validator=Schema(Any(Date(), None))
+            ),
+            Relationship('books')
+        ],
+        allow_client_generated_ids=True
     )
-    authors = Resource(
-        type='authors',
-        model_class=models.Author,
-        store=SQLAlchemyStore(db.session),
-    )
-    authors.allow_client_generated_ids = True
-    authors.add_attribute(
-        'name',
-        required=True,
-        validator=Schema(All(_compat.string_types, Length(min=1)))
-    )
-    authors.add_attribute(
-        'date_of_birth',
-        required=True,
-        validator=Schema(Date())
-    )
-    authors.add_attribute(
-        'date_of_death',
-        validator=Schema(Any(Date(), None))
-    )
-    authors.add_relationship('books')
 
     books = Resource(
         type='books',
         model_class=models.Book,
         store=SQLAlchemyStore(db.session),
-    )
-    books.add_attribute(
-        'title',
-        required=True,
-        validator=Schema(All(_compat.string_types, Length(min=1)))
-    )
-    books.add_attribute(
-        'date_published',
-        required=True,
-        validator=Schema(Date())
-    )
-    books.add_relationship(
-        'author',
-        required=True,
-        validator=Schema(models.Author)
-    )
-    books.add_relationship(
-        'chapters',
-        allow_include=True,
-        allow_full_replacement=True
-    )
-    books.add_relationship('series')
-    books.add_relationship(
-        'stores',
-        allow_include=True,
-        allow_full_replacement=True
+        fields=[
+            Attribute(
+                'title',
+                required=True,
+                validator=Schema(All(_compat.string_types, Length(min=1)))
+            ),
+            Attribute(
+                'date_published',
+                required=True,
+                validator=Schema(Date())
+            ),
+            Relationship(
+                'author',
+                required=True,
+                validator=Schema(models.Author)
+            ),
+            Relationship(
+                'chapters',
+                allow_include=True,
+                allow_full_replacement=True
+            ),
+            Relationship('series'),
+            Relationship(
+                'stores',
+                allow_include=True,
+                allow_full_replacement=True
+            )
+        ]
     )
 
     chapters = Resource(
         type='chapters',
         model_class=models.Chapter,
         store=SQLAlchemyStore(db.session),
+        fields=[
+            Attribute(
+                'title',
+                required=True,
+                validator=Schema(All(_compat.string_types, Length(min=1)))
+            ),
+            Attribute('ordering', validator=Schema(int)),
+            Relationship('book')
+        ]
     )
-    chapters.add_attribute(
-        'title',
-        required=True,
-        validator=Schema(All(_compat.string_types, Length(min=1)))
-    )
-    chapters.add_attribute('ordering', validator=Schema(int))
-    chapters.add_relationship('book') ### REQUIRED
 
     stores = Resource(
         type='stores',
         model_class=models.Store,
         store=SQLAlchemyStore(db.session),
+        fields=[
+            Attribute(
+                'name',
+                validator=Schema(All(_compat.string_types, Length(min=1)))
+            ),
+            Relationship('books')
+        ]
     )
-    stores.add_attribute(
-        'name',
-        validator=Schema(All(_compat.string_types, Length(min=1)))
-    )
-    stores.add_relationship('books')
 
     jsonapi.resources.register(series)
     jsonapi.resources.register(authors)
