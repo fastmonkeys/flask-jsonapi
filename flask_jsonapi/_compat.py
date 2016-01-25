@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import sys
 
-is_py3 = sys.version_info[0] > 2
+is_py2 = sys.version_info[0] == 2
 
-if is_py3:  # pragma: no cover
-    string_types = str
-else:       # pragma: no cover
+if is_py2:  # pragma: no cover
     string_types = basestring
+else:       # pragma: no cover
+    string_types = str
