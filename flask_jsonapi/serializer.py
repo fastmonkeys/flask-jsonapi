@@ -138,25 +138,24 @@ class Serializer(object):
         return identifier in self._included_resource_objects
 
     def _iter_included_models(self, model, include):
-        resource = self._get_resource(model)
-        store = resource.store
         for relationship_name in include:
-            relationship = resource.relationships[relationship_name]
-            if relationship.many:
-                related_models = store.get_related(model, relationship.name)
-                for related_model in related_models:
-                    yield related_model
-                    for m in self._iter_included_models(
-                        related_model,
-                        include[relationship.name]
-                    ):
-                        yield m
-            else:
-                related_model = store.get_related(model, relationship.name)
-                if related_model is not None:
-                    yield related_model
-                    for m in self._iter_included_models(
-                        related_model,
-                        include[relationship.name]
-                    ):
-                        yield m
+            for related_model in self._iter_related_models(
+                model,
+                relationship_name
+            ):
+                yield related_model
+                for m in self._iter_included_models(
+                    related_model,
+                    include[relationship_name]
+                ):
+                    yield m
+
+    def _iter_related_models(self, model, relationship_name):
+        resource = self.resource_registry.by_model_class[model.__class__]
+        relationship = resource.relationships[relationship_name]
+        related = resource.store.get_related(model, relationship.name)
+        if relationship.many:
+            for related_model in related:
+                yield related_model
+        elif related is not None:
+            yield related
