@@ -3,6 +3,141 @@ import itertools
 from . import link_builder
 
 
+def dump_resource_object(resource, params, model):
+    resource_object = dump_resource_identifier(resource=resource, model=model)
+
+    attributes_object = dump_attributes_object(
+        resource=resource,
+        params=params,
+        model=model
+    )
+    if attributes_object:
+        resource_object['attributes'] = attributes_object
+
+    relationships_object = dump_relationships_object(
+        resource=resource,
+        params=params,
+        model=model
+    )
+    if relationships_object:
+        resource_object['relationships'] = relationships_object
+
+    resource_object['links'] = {
+        'self': link_builder.build_individual_resource_url(
+            type=resource_object['type'],
+            id=resource_object['id']
+        )
+    }
+
+    return resource_object
+
+
+def dump_attributes_object(resource, params, model):
+    return {
+        attr: resource.store.get_attribute(model=model, attribute=attr)
+        for attr in get_included_attributes(resource=resource, params=params)
+    }
+
+
+def dump_relationships_object(resource, params, model):
+    return {
+        relationship: dump_relationship_object(
+            resource=resource,
+            model=model,
+            relationship_name=relationship
+        )
+        for relationship in get_included_relationships(
+            resource=resource,
+            params=params
+        )
+    }
+
+
+def dump_relationship_object(resource, model, relationship_name):
+    relationship = resource.relationships[relationship_name]
+    relationship_object = {}
+    if relationship.allow_include:
+        relationship_object['data'] = dump_resource_linkage(
+            resource=resource,
+            model=model,
+            relationship=relationship
+        )
+    relationship_object['links'] = dump_relationship_links_object(
+        resource=resource,
+        model=model,
+        relationship=relationship
+    )
+    return relationship_object
+
+
+def dump_relationship_links_object(resource, model, relationship):
+    return {
+        'self': link_builder.build_relationship_url(
+            type=resource.type,
+            id=resource.store.get_id(model),
+            relationship=relationship.name
+        ),
+        'related': link_builder.build_related_url(
+            type=resource.type,
+            id=resource.store.get_id(model),
+            relationship=relationship.name
+        ),
+    }
+
+
+def dump_resource_linkage(resource, model, relationship):
+    if relationship.many:
+        func = dump_to_many_resource_linkage
+    else:
+        func = dump_to_one_resource_linkage
+    return func(
+        resource=resource,
+        model=model,
+        relationship=relationship
+    )
+
+
+def dump_to_many_resource_linkage(resource, model, relationship):
+    related_models = resource.store.get_related(model, relationship.name)
+    return [
+        dump_resource_identifier(
+            resource=relationship.resource,
+            model=related_model
+        )
+        for related_model in related_models
+    ]
+
+
+def dump_to_one_resource_linkage(resource, model, relationship):
+    related_model = resource.store.get_related(model, relationship.name)
+    if related_model is not None:
+        return dump_resource_identifier(
+            resource=relationship.resource,
+            model=related_model
+        )
+
+
+def dump_resource_identifier(resource, model):
+    return {
+        'type': resource.type,
+        'id': resource.store.get_id(model)
+    }
+
+
+def get_included_attributes(resource, params):
+    fields = params.fields[resource.type]
+    attributes = fields & set(resource.attributes)
+    return attributes
+
+
+def get_included_relationships(resource, params):
+    fields = params.fields[resource.type]
+    relationships = fields & set(resource.relationships)
+    return relationships
+
+
+
+
 class Serializer(object):
     def __init__(self, resource_registry, params):
         self.resource_registry = resource_registry
@@ -10,7 +145,6 @@ class Serializer(object):
 
     def dump(self, input_, links=None):
         many = isinstance(input_, list)
-        self._included_resource_objects = set()
         data = self._dump_primary_data(input_, many)
         included = self._dump_included_data(input_, many)
         document = {'data': data}
@@ -39,123 +173,81 @@ class Serializer(object):
         else:
             return self._dump_resource_object(input_)
 
-    def _dump_included_data(self, input_, many):
-        if input_ is None:
-            return []
-        input_ = input_ if many else [input_]
-        models = itertools.chain.from_iterable(
-            self._iter_included_models(model, self.params.include.tree)
-            for model in input_
+
+def dump_resource(resource_registry, params, model):
+    resource = resource_registry.by_model_class[model.__class__]
+    primary_data = dump_resource_object(
+        resource=resource,
+        params=params,
+        model=model
+    )
+    document = {'data': primary_data}
+    included = dump_included(
+        resource_registry=resource_registry,
+        models=[model],
+        params=params
+    )
+    if included:
+        document['included'] = included
+    return document
+
+
+def get_identifier(resource, model):
+    return (resource.type, resource.store.get_id(model))
+
+
+def dump_included(resource_registry, models, params):
+    included_models = itertools.chain.from_iterable(
+        iter_included_models(
+            resource=resource_registry.by_model_class[model.__class__],
+            model=model,
+            include=params.include.tree
         )
-        return [
-            self._dump_resource_object(model)
-            for model in models
-            if not self._has_already_been_included(model)
-        ]
-
-    def _dump_resource_object(self, model):
-        resource = self._get_resource(model)
-        identifier = (resource.type, resource.store.get_id(model))
-        self._included_resource_objects.add(identifier)
-
-        resource_object = {
-            'id': resource.store.get_id(model),
-            'type': resource.type,
-        }
-
-        attributes_object = self._dump_attributes_object(resource, model)
-        if attributes_object:
-            resource_object['attributes'] = attributes_object
-
-        relationships_object = self._dump_relationships_object(resource, model)
-        if relationships_object:
-            resource_object['relationships'] = relationships_object
-
-        resource_object['links'] = {
-            'self': link_builder.build_individual_resource_url(
-                type=resource_object['type'],
-                id=resource_object['id']
+        for model in models
+    )
+    seen = {
+        get_identifier(
+            resource=resource_registry.by_model_class[model.__class__],
+            model=model
+        )
+        for model in models
+    }
+    included = []
+    for model in included_models:
+        resource = resource_registry.by_model_class[model.__class__]
+        identifier = get_identifier(resource=resource, model=model)
+        if identifier not in seen:
+            resource_object = dump_resource_object(
+                resource=resource,
+                params=params,
+                model=model
             )
-        }
+            included.append(resource_object)
+            seen.add(identifier)
+    return included
 
-        return resource_object
 
-    def _get_resource(self, model):
-        return self.resource_registry.by_model_class[model.__class__]
-
-    def _dump_attributes_object(self, resource, model):
-        fields = self.params.fields[resource.type]
-        attributes = fields & set(resource.attributes)
-        return {
-            attr: resource.store.get_attribute(model, attr)
-            for attr in attributes
-        }
-
-    def _dump_relationships_object(self, resource, model):
-        fields = self.params.fields[resource.type]
-        relationships = fields & set(resource.relationships)
-        return {
-            relationship: self._dump_relationship_object(model, relationship)
-            for relationship in relationships
-        }
-
-    def _dump_relationship_object(self, model, relationship_name):
-        resource = self._get_resource(model)
+def iter_included_models(resource, model, include):
+    for relationship_name in include:
         relationship = resource.relationships[relationship_name]
-        relationship_object = {}
-        if relationship.allow_include:
-            related = resource.store.get_related(model, relationship_name)
-            if relationship.many:
-                data = [self._dump_resource_identifier(m) for m in related]
-            else:
-                data = self._dump_resource_identifier(related)
-            relationship_object['data'] = data
-        relationship_object['links'] = {
-            "self": link_builder.build_relationship_url(
-                type=resource.type,
-                id=resource.store.get_id(model),
-                relationship=relationship.name
-            ),
-            "related": link_builder.build_related_url(
-                type=resource.type,
-                id=resource.store.get_id(model),
-                relationship=relationship.name
-            ),
-        }
-        return relationship_object
-
-    def _dump_resource_identifier(self, model):
-        if model is not None:
-            resource = self._get_resource(model)
-            return {
-                "type": resource.type,
-                "id": resource.store.get_id(model)
-            }
-
-    def _has_already_been_included(self, model):
-        resource = self._get_resource(model)
-        identifier = (resource.type, resource.store.get_id(model))
-        return identifier in self._included_resource_objects
-
-    def _iter_included_models(self, model, include):
-        for relationship_name in include:
-            for related_model in self._iter_related_models(
-                model,
-                relationship_name
+        for related_model in iter_related_models(
+            resource=resource,
+            model=model,
+            relationship=relationship
+        ):
+            yield related_model
+            for m in iter_included_models(
+                resource=relationship.resource,
+                model=related_model,
+                include=include[relationship_name]
             ):
-                yield related_model
-                for m in self._iter_included_models(
-                    related_model,
-                    include[relationship_name]
-                ):
-                    yield m
+                yield m
 
-    def _iter_related_models(self, model, relationship_name):
-        resource = self.resource_registry.by_model_class[model.__class__]
-        relationship = resource.relationships[relationship_name]
-        related = resource.store.get_related(model, relationship.name)
-        if relationship.many:
-            for related_model in related:
-                yield related_model
-        elif related is not None:
-            yield related
+
+def iter_related_models(resource, model, relationship):
+    related = resource.store.get_related(model, relationship.name)
+    if relationship.many:
+        for related_model in related:
+            yield related_model
+    elif related is not None:
+        yield related

@@ -15,6 +15,8 @@ class DefaultController(object):
     def fetch(self, type):
         resource = self._get_resource(type)
         params = self._build_params(type)
+
+        ###
         instances = resource.store.fetch(resource.model_class, params)
         count = resource.store.count(resource.model_class)
         links = self._get_links(params, count)
@@ -23,6 +25,8 @@ class DefaultController(object):
     def fetch_one(self, type, id):
         resource = self._get_resource(type)
         params = self._build_params(type)
+
+        ###
         instance = self._fetch_object(resource, id, params)
         links = self._get_links(params)
         return self._serialize(instance, params, links)
@@ -31,6 +35,8 @@ class DefaultController(object):
         resource = self._get_resource(type)
         relationship = self._get_relationship(resource, relationship)
         params = self._build_params(relationship.type)
+
+        ###
         instance = self._fetch_object(resource, id)
         related = resource.store.fetch_related(
             instance=instance,
@@ -48,6 +54,8 @@ class DefaultController(object):
         resource = self._get_resource(type)
         relationship = self._get_relationship(resource, relationship)
         params = self._build_params(relationship.type)
+
+        ###
         instance = self._fetch_object(resource, id)
         related = resource.store.fetch_related(
             instance=instance,
@@ -71,6 +79,8 @@ class DefaultController(object):
         params = self._build_params(type)
         parser = RequestParser(resource=resource)
         result = parser.parse(data=self._get_json())
+
+        ###
         try:
             instance = resource.store.create(
                 model_class=resource.model_class,
@@ -94,6 +104,8 @@ class DefaultController(object):
     def update(self, type, id):
         resource = self._get_resource(type)
         params = self._build_params(type)
+
+        ###
         instance = self._fetch_object(resource, id)
         parser = RequestParser(resource=resource, id=id)
         result = parser.parse(data=self._get_json())
@@ -103,6 +115,8 @@ class DefaultController(object):
 
     def delete(self, type, id):
         resource = self._get_resource(type)
+
+        ###
         try:
             instance = resource.store.fetch_one(resource.model_class, id)
         except exceptions.ObjectNotFound:
@@ -114,6 +128,8 @@ class DefaultController(object):
     def create_relationship(self, type, id, relationship):
         resource = self._get_resource(type)
         relationship = self._get_relationship(resource, relationship)
+
+        ###
         instance = self._fetch_object(resource, id)
         if not relationship.many:
             abort(405)
@@ -132,6 +148,8 @@ class DefaultController(object):
     def update_relationship(self, type, id, relationship):
         resource = self._get_resource(type)
         relationship = self._get_relationship(resource, relationship)
+
+        ###
         instance = self._fetch_object(resource, id)
         parser = RequestParser(resource=resource, id=id)
         resource.store.update(
@@ -150,6 +168,8 @@ class DefaultController(object):
     def delete_relationship(self, type, id, relationship):
         resource = self._get_resource(type)
         relationship = self._get_relationship(resource, relationship)
+
+        ###
         instance = self._fetch_object(resource, id)
         if not relationship.many:
             abort(405)
