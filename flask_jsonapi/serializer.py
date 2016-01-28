@@ -3,6 +3,43 @@ import itertools
 from . import link_builder
 
 
+def dump_resource_collection_links(type, params=None):
+    return {
+        'self': link_builder.build_resource_collection_url(type=type)
+    }
+
+
+def dump_individual_resource_links(type, id, params=None):
+    return {
+        'self': link_builder.build_individual_resource_url(type=type, id=id)
+    }
+
+
+def dump_related_links(type, id, relationship, params=None):
+    return {
+        'self': link_builder.build_related_url(
+            type=type,
+            id=id,
+            relationship=relationship
+        )
+    }
+
+
+def dump_relationship_links(type, id, relationship, params=None):
+    return {
+        'self': link_builder.build_relationship_url(
+            type=type,
+            id=id,
+            relationship=relationship
+        ),
+        'related': link_builder.build_related_url(
+            type=type,
+            id=id,
+            relationship=relationship
+        ),
+    }
+
+
 def dump_resource_object(resource, params, model):
     resource_object = dump_resource_identifier(resource=resource, model=model)
 
@@ -22,12 +59,10 @@ def dump_resource_object(resource, params, model):
     if relationships_object:
         resource_object['relationships'] = relationships_object
 
-    resource_object['links'] = {
-        'self': link_builder.build_individual_resource_url(
-            type=resource_object['type'],
-            id=resource_object['id']
-        )
-    }
+    resource_object['links'] = dump_individual_resource_links(
+        type=resource_object['type'],
+        id=resource_object['id']
+    )
 
     return resource_object
 
@@ -62,27 +97,12 @@ def dump_relationship_object(resource, model, relationship_name):
             model=model,
             relationship=relationship
         )
-    relationship_object['links'] = dump_relationship_links_object(
-        resource=resource,
-        model=model,
-        relationship=relationship
+    relationship_object['links'] = dump_relationship_links(
+        type=resource.type,
+        id=resource.store.get_id(model),
+        relationship=relationship.name
     )
     return relationship_object
-
-
-def dump_relationship_links_object(resource, model, relationship):
-    return {
-        'self': link_builder.build_relationship_url(
-            type=resource.type,
-            id=resource.store.get_id(model),
-            relationship=relationship.name
-        ),
-        'related': link_builder.build_related_url(
-            type=resource.type,
-            id=resource.store.get_id(model),
-            relationship=relationship.name
-        ),
-    }
 
 
 def dump_resource_linkage(resource, model, relationship):
@@ -136,59 +156,34 @@ def get_included_relationships(resource, params):
     return relationships
 
 
+def dump_document(resource_registry, params, input, many=False, links=None):
+    if many:
+        models = input
+    else:
+        models = [] if input is None else [input]
 
-
-class Serializer(object):
-    def __init__(self, resource_registry, params):
-        self.resource_registry = resource_registry
-        self.params = params
-
-    def dump(self, input_, links=None):
-        many = isinstance(input_, list)
-        data = self._dump_primary_data(input_, many)
-        included = self._dump_included_data(input_, many)
-        document = {'data': data}
-        if included:
-            document['included'] = included
-        if links:
-            document['links'] = links
-        return document
-
-    def dump_relationship(self, input_, links=None):
-        many = isinstance(input_, list)
-        if many:
-            data = [self._dump_resource_identifier(m) for m in input_]
-        else:
-            data = self._dump_resource_identifier(input_)
-        document = {'data': data}
-        if links:
-            document['links'] = links
-        return document
-
-    def _dump_primary_data(self, input_, many):
-        if many:
-            return [self._dump_resource_object(model) for model in input_]
-        elif input_ is None:
-            return None
-        else:
-            return self._dump_resource_object(input_)
-
-
-def dump_resource(resource_registry, params, model):
-    resource = resource_registry.by_model_class[model.__class__]
-    primary_data = dump_resource_object(
-        resource=resource,
-        params=params,
-        model=model
-    )
+    resource_objects = [
+        dump_resource_object(
+            resource=resource_registry.by_model_class[model.__class__],
+            params=params,
+            model=model
+        )
+        for model in models
+    ]
+    if many:
+        primary_data = resource_objects
+    else:
+        primary_data = resource_objects[0] if resource_objects else None
     document = {'data': primary_data}
     included = dump_included(
         resource_registry=resource_registry,
-        models=[model],
+        models=models,
         params=params
     )
     if included:
         document['included'] = included
+    if links:
+        document['links'] = links
     return document
 
 

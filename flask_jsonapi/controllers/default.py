@@ -2,10 +2,9 @@ import qstring
 from flask import abort, current_app, json, request
 from werkzeug.urls import url_encode
 
-from .. import errors, exceptions, link_builder
+from .. import errors, exceptions, link_builder, serializer
 from ..params import Parameters
 from ..request_parser import RequestParser
-from ..serializer import Serializer
 
 
 class DefaultController(object):
@@ -19,8 +18,18 @@ class DefaultController(object):
         ###
         instances = resource.store.fetch(resource.model_class, params)
         count = resource.store.count(resource.model_class)
-        links = self._get_links(params, count)
-        return self._serialize(instances, params, links)
+        links = serializer.dump_resource_collection_links(
+            type=type,
+            params=params
+        )
+        data = serializer.dump_document(
+            resource_registry=self.resource_registry,
+            params=params,
+            input=instances,
+            links=links,
+            many=True
+        )
+        return json.dumps(data)
 
     def fetch_one(self, type, id):
         resource = self._get_resource(type)
@@ -28,8 +37,18 @@ class DefaultController(object):
 
         ###
         instance = self._fetch_object(resource, id, params)
-        links = self._get_links(params)
-        return self._serialize(instance, params, links)
+        links = serializer.dump_individual_resource_links(
+            type=type,
+            id=id,
+            params=params
+        )
+        data = serializer.dump_document(
+            resource_registry=self.resource_registry,
+            params=params,
+            input=instance,
+            links=links
+        )
+        return json.dumps(data)
 
     def fetch_related(self, type, id, relationship):
         resource = self._get_resource(type)
@@ -89,14 +108,20 @@ class DefaultController(object):
             )
         except exceptions.ObjectAlreadyExists:
             raise errors.ResourceAlreadyExists(type=type, id=result.id)
-        links = {
-            'self': link_builder.build_individual_resource_url(
-                type=type,
-                id=resource.store.get_id(instance)
-            )
-        }
+
+        links = serializer.dump_individual_resource_links(
+            type=type,
+            id=resource.store.get_id(instance)
+        )
+        data = serializer.dump_document(
+            resource_registry=self.resource_registry,
+            params=params,
+            input=instance,
+            links=links
+        )
+
         return current_app.response_class(
-            response=self._serialize(instance, params, links),
+            response=json.dumps(data),
             status=201,
             headers={'Location': links['self']}
         )
@@ -221,11 +246,6 @@ class DefaultController(object):
             type=type,
             params=qstring.nest(request.args.items(multi=True))
         )
-
-    def _serialize(self, input, params, links):
-        serializer = Serializer(self.resource_registry, params)
-        data = serializer.dump(input, links)
-        return json.dumps(data)
 
     def _get_links(self, params, count=None):
         links = {

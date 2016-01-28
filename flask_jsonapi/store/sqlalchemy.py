@@ -129,8 +129,8 @@ class SQLAlchemyStore(object):
         prop = self._get_relationship_property(model_class, relationship)
         return prop.mapper.class_
 
-    def get_attribute(self, instance, attribute):
-        return getattr(instance, attribute)
+    def get_attribute(self, model, attribute):
+        return getattr(model, attribute)
 
     def get_id(self, instance):
         return str(instance.id)

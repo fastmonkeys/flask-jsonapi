@@ -4,8 +4,8 @@ import datetime
 
 import pytest
 
+from flask_jsonapi import serializer
 from flask_jsonapi.params import Parameters
-from flask_jsonapi.serializer import Serializer
 
 
 @pytest.fixture
@@ -29,8 +29,11 @@ def test_single_resource(jsonapi, resource_registry, book, db):
         type='books',
         params={}
     )
-    serializer = Serializer(resource_registry=resource_registry, params=params)
-    data = serializer.dump(book)
+    data = serializer.dump_document(
+        resource_registry=resource_registry,
+        params=params,
+        input=book
+    )
     assert data == {
         "data": {
             "type": "books",
@@ -116,8 +119,11 @@ def test_null_resource(jsonapi, resource_registry, db):
         type='books',
         params={}
     )
-    serializer = Serializer(resource_registry=resource_registry, params=params)
-    data = serializer.dump(None)
+    data = serializer.dump_document(
+        resource_registry=resource_registry,
+        params=params,
+        input=None
+    )
     assert data == {
         "data": None
     }
@@ -131,11 +137,11 @@ def test_sparse_fieldsets(jsonapi, resource_registry, book, db):
             'fields': {'books': 'title,author'}
         }
     )
-    serializer = Serializer(
+    data = serializer.dump_document(
         resource_registry=resource_registry,
         params=params,
+        input=book
     )
-    data = serializer.dump(book)
     assert data == {
         "data": {
             "type": "books",
@@ -180,8 +186,11 @@ def test_inclusion_of_related_resources(
             'include': 'books,books.author,books.chapters'
         }
     )
-    serializer = Serializer(resource_registry=resource_registry, params=params)
-    data = serializer.dump(series)
+    data = serializer.dump_document(
+        resource_registry=resource_registry,
+        params=params,
+        input=series
+    )
     assert len(data['included']) == 66
     assert data == {
         "data": {
@@ -1011,6 +1020,10 @@ def test_resource_collection(jsonapi, resource_registry, books, db):
         type='books',
         params={}
     )
-    serializer = Serializer(resource_registry=resource_registry, params=params)
-    data = serializer.dump(books)
+    data = serializer.dump_document(
+        resource_registry=resource_registry,
+        params=params,
+        input=books,
+        many=True
+    )
     assert len(data['data']) == 11
