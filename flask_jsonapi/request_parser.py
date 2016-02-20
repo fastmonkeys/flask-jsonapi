@@ -58,8 +58,7 @@ class RequestParser(object):
     def parse_attributes_object(self, data, path):
         _ensure_object(data, path)
         self._check_extra_attributes(data, path)
-        self._check_required_attributes(data, path)
-        return self._parse_attributes(data, path)
+        return data
 
     def _check_extra_attributes(self, data, path):
         for attribute_name in data:
@@ -78,32 +77,9 @@ class RequestParser(object):
                 source_pointer=json_pointer_from_path(path)
             )
 
-    def _check_required_attributes(self, data, path):
-        if self.id is None:
-            for attribute in self.resource.attributes.values():
-                self._check_required_field(attribute, data, path)
-
-    def _parse_attributes(self, data, path):
-        return {
-            attribute_name: self._parse_attribute(
-                attribute=self.resource.attributes[attribute_name],
-                data=value,
-                path=path + [attribute_name]
-            )
-            for attribute_name, value in data.items()
-        }
-
-    def _parse_attribute(self, attribute, data, path):
-        try:
-            return attribute.validator(data)
-        except errors.ValidationError as e:
-            e.source_pointer = path.join
-            raise
-
     def parse_relationships_object(self, data, path):
         _ensure_object(data, path)
         self._check_extra_relationships(data, path)
-        self._check_required_relationships(data, path)
         return self._parse_relationships(data, path)
 
     def _check_extra_relationships(self, data, path):
@@ -123,18 +99,6 @@ class RequestParser(object):
                     relationship=relationship_name,
                     type=self.resource.type
                 ),
-                source_pointer=json_pointer_from_path(path)
-            )
-
-    def _check_required_relationships(self, data, path):
-        if self.id is None:
-            for relationship in self.resource.relationships.values():
-                self._check_required_field(relationship, data, path)
-
-    def _check_required_field(self, field, data, path):
-        if field.required and field.name not in data:
-            raise errors.ValidationError(
-                detail='{!r} is a required field'.format(field.name),
                 source_pointer=json_pointer_from_path(path)
             )
 

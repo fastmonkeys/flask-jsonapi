@@ -1,34 +1,26 @@
 from flask import url_for
 
 
-def build_resource_collection_url(type):
-    return url_for('jsonapi.fetch', type=type, _external=True)
+class LinkBuilder(object):
+    def __init__(self, base_url):
+        self.base_url = base_url
 
+    def resource_self_link(self, resource, obj):
+        data = resource_identifier.dump(resource=resource, obj=obj)
+        return '{base_url}/{type}/{id}'.format(base_url=self.base_url, **data)
 
-def build_individual_resource_url(type, id):
-    return url_for(
-        'jsonapi.fetch_one',
-        type=type,
-        id=id,
-        _external=True
-    )
+    def relationship_self_link(self, relationship, obj):
+        return '{resource_self_link}/relationships/{relationship}'.format(
+            resource_self_link=self.resource_self_link(
+                resource=relationship.parent,
+                obj=obj
+            )
+        )
 
-
-def build_related_url(type, id, relationship):
-    return url_for(
-        'jsonapi.fetch_related',
-        type=type,
-        id=id,
-        relationship=relationship,
-        _external=True
-    )
-
-
-def build_relationship_url(type, id, relationship):
-    return url_for(
-        'jsonapi.fetch_relationship',
-        type=type,
-        id=id,
-        relationship=relationship,
-        _external=True
-    )
+    def relationship_related_link(self, relationship, obj):
+        return '{resource_self_link}/{relationship}'.format(
+            resource_self_link=self.resource_self_link(
+                resource=relationship.parent,
+                obj=obj
+            )
+        )

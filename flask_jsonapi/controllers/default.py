@@ -2,7 +2,7 @@ import qstring
 from flask import abort, current_app, json, request
 from werkzeug.urls import url_encode
 
-from .. import errors, exceptions, link_builder, serializer
+from .. import errors, exceptions, link_builder, serialization
 from ..params import Parameters
 from ..request_parser import RequestParser
 

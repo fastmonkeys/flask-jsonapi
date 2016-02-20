@@ -7,14 +7,12 @@ class Resource(object):
         self,
         type,
         store,
-        model_class,
         fields,
         paginator=None,
         allow_client_generated_ids=False
     ):
         self._registry = None
         self.type = type
-        self.model_class = model_class
         self.store = store
         self.fields = {}
         self.attributes = {}
@@ -22,12 +20,23 @@ class Resource(object):
         self._add_fields(fields)
         self.paginator = PagedPaginator() if paginator is None else paginator
         self.allow_client_generated_ids = allow_client_generated_ids
+        self.id_type = int
 
     def _add_fields(self, fields):
         for field in fields:
             self._add_field(field)
 
     def _add_field(self, field):
+        self._validate_field(field)
+
+        field.bind(self)
+        self.fields[field.name] = field
+        if isinstance(field, Attribute):
+            self.attributes[field.name] = field
+        if isinstance(field, Relationship):
+            self.relationships[field.name] = field
+
+    def _validate_field(self, field):
         if not isinstance(field, Field):
             raise TypeError('expected Field')
 
@@ -38,12 +47,10 @@ class Resource(object):
                 )
             )
 
-        field.bind(self)
-        self.fields[field.name] = field
-        if isinstance(field, Attribute):
-            self.attributes[field.name] = field
-        if isinstance(field, Relationship):
-            self.relationships[field.name] = field
+        if field.name in {'id', 'type'}:
+            raise exceptions.FieldNamingConflict(
+                "A resource cannot have a field named 'type' or 'id'."
+            )
 
     def register(self, registry):
         if self._registry is not None:
@@ -62,20 +69,11 @@ class Resource(object):
 
 
 class Field(object):
-    def __init__(self, name, required=False, validator=None):
+    def __init__(self, name):
         self.name = name
-        self.required = required
-        self.validator = (lambda v: v) if validator is None else validator
-        self._check_name()
 
     def bind(self, parent):
         self.parent = parent
-
-    def _check_name(self):
-        if self.name in {'id', 'type'}:
-            raise exceptions.FieldNamingConflict(
-                "A resource cannot have a field named 'type' or 'id'."
-            )
 
     def __repr__(self):
         return '<{cls} name={name!r}>'.format(
@@ -92,34 +90,41 @@ class Relationship(Field):
     def __init__(
         self,
         name,
+        type,
+        many,
         allow_include=None,
-        allow_full_replacement=False,
         **kwargs
     ):
         super(Relationship, self).__init__(name, **kwargs)
+        self.type = type
+        self.many = many
         self.allow_include = allow_include
-        self.allow_full_replacement = allow_full_replacement
-
-    def bind(self, *args, **kwargs):
-        super(Relationship, self).bind(*args, **kwargs)
-        self.many = self.parent.store.is_to_many_relationship(
-            self.parent.model_class,
-            self.name
-        )
-        if self.allow_include is None:
-            self.allow_include = not self.many
-
-    @property
-    def model_class(self):
-        return self.parent.store.get_related_model_class(
-            self.parent.model_class,
-            self.name
-        )
 
     @property
     def resource(self):
-        return self.parent._registry.by_model_class[self.model_class]
+        return self.parent._registry.by_type[self.type]
 
-    @property
-    def type(self):
-        return self.resource.type
+
+class ToOneRelationship(Relationship):
+    def __init__(self, name, type, **kwargs):
+        super(ToOneRelationship, self).__init__(
+            name=name,
+            type=type,
+            many=False,
+            **kwargs
+        )
+        if self.allow_include is None:
+            self.allow_include = True
+
+
+class ToManyRelationship(Relationship):
+    def __init__(self, name, type, allow_full_replacement=False, **kwargs):
+        super(ToManyRelationship, self).__init__(
+            name=name,
+            type=type,
+            many=True,
+            **kwargs
+        )
+        if self.allow_include is None:
+            self.allow_include = False
+        self.allow_full_replacement = allow_full_replacement

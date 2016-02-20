@@ -1,6 +1,7 @@
 __version__ = '0.1.0 '
 
 from .controllers.default import DefaultController
+from .resource import Resource
 from .resource_registry import ResourceRegistry
 from .views import blueprint
 

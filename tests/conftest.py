@@ -1,17 +1,20 @@
 import json
 import os
-from datetime import date, datetime
+from datetime import datetime
 
 import pytest
 from bunch import Bunch
 from flask import Flask, Response
-from flask.json import JSONEncoder as _JSONEncoder
 from flask_sqlalchemy import SQLAlchemy
-from voluptuous import All, Any, Length, Schema
 from werkzeug.utils import import_string
 
-from flask_jsonapi import JSONAPI, _compat
-from flask_jsonapi.resource import Attribute, Relationship, Resource
+from flask_jsonapi import JSONAPI
+from flask_jsonapi.resource import (
+    Attribute,
+    Resource,
+    ToManyRelationship,
+    ToOneRelationship
+)
 from flask_jsonapi.store.sqlalchemy import SQLAlchemyStore
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -29,17 +32,6 @@ class JSONResponse(Response):
         return json.loads(self.data.decode('utf8'))
 
 
-class JSONEncoder(_JSONEncoder):
-    def default(self, o):
-        if isinstance(o, date):
-            return o.isoformat()
-        return JSONEncoder.default(self, o)
-
-
-def Date(fmt='%Y-%m-%d'):
-    return lambda v: datetime.strptime(v, fmt).date()
-
-
 @pytest.yield_fixture
 def app():
     app = Flask(__name__)
@@ -49,7 +41,6 @@ def app():
     )
     app.config['TESTING'] = True
     app.response_class = JSONResponse
-    app.json_encoder = JSONEncoder
     with app.app_context():
         yield app
 
@@ -78,102 +69,60 @@ def jsonapi(app, controller_class, db, models):
 
     series = Resource(
         type='series',
-        model_class=models.Series,
-        store=SQLAlchemyStore(db.session),
         fields=[
-            Attribute(
-                'title',
-                required=True,
-                validator=Schema(All(_compat.string_types, Length(min=1)))
-            ),
-            Relationship('books', allow_include=True)
-        ]
+            Attribute('title'),
+            ToManyRelationship('books', type='books', allow_include=True),
+        ],
+        store=SQLAlchemyStore(session=db.session, model_class=models.Series),
     )
 
     authors = Resource(
         type='authors',
-        model_class=models.Author,
-        store=SQLAlchemyStore(db.session),
         fields=[
-            Attribute(
-                'name',
-                required=True,
-                validator=Schema(All(_compat.string_types, Length(min=1)))
-            ),
-            Attribute(
-                'date_of_birth',
-                required=True,
-                validator=Schema(Date())
-            ),
-            Attribute(
-                'date_of_death',
-                validator=Schema(Any(Date(), None))
-            ),
-            Relationship('books')
+            Attribute('name'),
+            Attribute('date_of_birth'),
+            Attribute('date_of_death'),
+            ToManyRelationship('books', type='books'),
         ],
-        allow_client_generated_ids=True
+        store=SQLAlchemyStore(session=db.session, model_class=models.Author),
+        allow_client_generated_ids=True,
     )
 
     books = Resource(
         type='books',
-        model_class=models.Book,
-        store=SQLAlchemyStore(db.session),
         fields=[
-            Attribute(
-                'title',
-                required=True,
-                validator=Schema(All(_compat.string_types, Length(min=1)))
-            ),
-            Attribute(
-                'date_published',
-                required=True,
-                validator=Schema(Date())
-            ),
-            Relationship(
-                'author',
-                required=True,
-                validator=Schema(models.Author)
-            ),
-            Relationship(
+            Attribute('title'),
+            Attribute('date_published'),
+            ToOneRelationship('author', type='authors'),
+            ToManyRelationship(
                 'chapters',
+                type='chapters',
                 allow_include=True,
                 allow_full_replacement=True
             ),
-            Relationship('series'),
-            Relationship(
-                'stores',
-                allow_include=True,
-                allow_full_replacement=True
-            )
-        ]
+            ToOneRelationship('series', type='series'),
+            ToManyRelationship('stores', type='stores'),
+        ],
+        store=SQLAlchemyStore(session=db.session, model_class=models.Book),
     )
 
     chapters = Resource(
         type='chapters',
-        model_class=models.Chapter,
-        store=SQLAlchemyStore(db.session),
         fields=[
-            Attribute(
-                'title',
-                required=True,
-                validator=Schema(All(_compat.string_types, Length(min=1)))
-            ),
-            Attribute('ordering', validator=Schema(int)),
-            Relationship('book')
-        ]
+            Attribute('title'),
+            Attribute('ordering'),
+            ToOneRelationship('book', type='books'),
+        ],
+        store=SQLAlchemyStore(session=db.session, model_class=models.Chapter),
     )
 
     stores = Resource(
         type='stores',
-        model_class=models.Store,
-        store=SQLAlchemyStore(db.session),
         fields=[
-            Attribute(
-                'name',
-                validator=Schema(All(_compat.string_types, Length(min=1)))
-            ),
-            Relationship('books')
-        ]
+            Attribute('name'),
+            ToManyRelationship('books', type='books'),
+        ],
+        store=SQLAlchemyStore(session=db.session, model_class=models.Store),
     )
 
     jsonapi.resources.register(series)

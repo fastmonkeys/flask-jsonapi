@@ -7,18 +7,19 @@ from .. import exceptions
 
 
 class SQLAlchemyStore(object):
-    def __init__(self, session):
+    def __init__(self, session, model_class):
         self.session = session
+        self.model_class = model_class
 
-    def fetch(self, model_class, params=None):
-        query = self.query(model_class)
+    def fetch(self, params=None):
+        query = self.query
         if params:
             query = self._include_related(query, params.include)
             query = self._paginate(query, params.pagination)
         return query.all()
 
-    def fetch_one(self, model_class, id, params=None):
-        query = self.query(model_class).filter_by(id=id)
+    def fetch_one(self, id, params=None):
+        query = self.query.filter_by(id=id)
         if params:
             query = self._include_related(query, params.include)
         try:
@@ -26,20 +27,17 @@ class SQLAlchemyStore(object):
         except orm.exc.NoResultFound:
             raise exceptions.ObjectNotFound
 
-    def get_related(self, instance, relationship):
-        return getattr(instance, relationship)
+    def count_related(self, model, relationship):
+        return self._query_related(model, relationship).count()
 
-    def count_related(self, instance, relationship):
-        return self._query_related(instance, relationship).count()
-
-    def fetch_related(self, instance, relationship, params=None):
-        if self.is_to_many_relationship(instance.__class__, relationship):
-            return self._fetch_many_related(instance, relationship, params)
+    def fetch_related(self, model, relationship, params=None):
+        if self.is_to_many_relationship(relationship):
+            return self._fetch_many_related(model, relationship, params)
         else:
-            return self._fetch_one_related(instance, relationship, params)
+            return self._fetch_one_related(model, relationship, params)
 
-    def _fetch_one_related(self, instance, relationship, params):
-        query = self._query_related(instance, relationship)
+    def _fetch_one_related(self, model, relationship, params):
+        query = self._query_related(model, relationship)
         if params:
             query = self._include_related(query, params.include)
         try:
@@ -47,33 +45,34 @@ class SQLAlchemyStore(object):
         except orm.exc.NoResultFound:
             return None
 
-    def _fetch_many_related(self, instance, relationship, params):
-        query = self._query_related(instance, relationship)
+    def _fetch_many_related(self, model, relationship, params):
+        query = self._query_related(model, relationship)
         if params:
             query = self._include_related(query, params.include)
             query = self._paginate(query, params.pagination)
         return query.all()
 
-    def _query_related(self, instance, relationship):
+    def _query_related(self, model, relationship):
         related_model_class = self.get_related_model_class(
-            instance.__class__,
+            self.model_class,
             relationship
         )
         relationship_property = self._get_relationship_property(
-            instance.__class__,
+            self.model_class,
             relationship
         )
         query = self.session.query(related_model_class)
-        query = query.filter(relationship_property._with_parent(instance))
+        query = query.filter(relationship_property._with_parent(model))
         if relationship_property.order_by:
             query = query.order_by(*relationship_property.order_by)
         return query
 
-    def count(self, model_class):
-        return self.query(model_class).count()
+    def count(self):
+        return self.query.count()
 
-    def query(self, model_class):
-        return self.session.query(model_class)
+    @property
+    def query(self):
+        return self.session.query(self.model_class)
 
     def _include_related(self, query, include):
         paths = [] if include is None else include.paths
@@ -89,10 +88,10 @@ class SQLAlchemyStore(object):
             query = query.offset(pagination.offset).limit(pagination.limit)
         return query
 
-    def create(self, model_class, id, fields):
-        if id is not None and self._exists(model_class, id):
+    def create(self, id, fields):
+        if id is not None and self._exists(self.model_class, id):
             raise exceptions.ObjectAlreadyExists
-        instance = model_class(id=id, **fields)
+        instance = self.model_class(id=id, **fields)
         self.session.add(instance)
         self.session.commit()
         return instance
@@ -102,8 +101,8 @@ class SQLAlchemyStore(object):
             setattr(instance, name, value)
         self.session.commit()
 
-    def _exists(self, model_class, id):
-        query = self.session.query(model_class).filter_by(id=id)
+    def _exists(self, id):
+        query = self.session.query(self.model_class).filter_by(id=id)
         return self.session.query(query.exists()).scalar()
 
     def delete(self, instance):
@@ -125,26 +124,20 @@ class SQLAlchemyStore(object):
                 pass
         self.session.commit()
 
-    def get_related_model_class(self, model_class, relationship):
-        prop = self._get_relationship_property(model_class, relationship)
+    def get_related_model_class(self, relationship):
+        prop = self._get_relationship_property(self.model_class, relationship)
         return prop.mapper.class_
 
-    def get_attribute(self, model, attribute):
-        return getattr(model, attribute)
-
-    def get_id(self, instance):
-        return str(instance.id)
-
-    def is_to_many_relationship(self, model_class, relationship):
-        mapper = sqlalchemy.inspect(model_class)
+    def is_to_many_relationship(self, relationship):
+        mapper = sqlalchemy.inspect(self.model_class)
         return mapper.relationships[relationship].uselist
 
-    def validate_relationship(self, model_class, relationship):
-        self._get_relationship_property(model_class, relationship)
+    def validate_relationship(self, relationship):
+        self._get_relationship_property(relationship)
 
-    def _get_relationship_property(self, model_class, relationship):
-        mapper = sqlalchemy.inspect(model_class)
+    def _get_relationship_property(self, relationship):
+        mapper = sqlalchemy.inspect(self.model_class)
         try:
             return mapper.relationships[relationship]
         except KeyError:
-            raise exceptions.InvalidRelationship(model_class, relationship)
+            raise exceptions.InvalidRelationship(self.model_class, relationship)
