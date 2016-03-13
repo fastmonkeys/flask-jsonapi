@@ -1,4 +1,9 @@
-from . import attributes_object, relationships_object, resource_identifier, link_builder
+from . import (
+    attributes_object,
+    link_builder,
+    relationships_object,
+    resource_identifier
+)
 
 
 def dump(resource, model, fields):

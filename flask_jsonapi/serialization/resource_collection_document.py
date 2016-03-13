@@ -1,4 +1,5 @@
 import itertools
+
 from . import document
 
 
@@ -8,7 +9,10 @@ def dump(*args, **kwargs):
 
 class _ResourceCollectionDocumentSerializer(document._DocumentSerializer):
     def __init__(self, resource, models, **kwargs):
-        super(_ResourceCollectionDocumentSerializer, self).__init__(resource, **kwargs)
+        super(_ResourceCollectionDocumentSerializer, self).__init__(
+            resource,
+            **kwargs
+        )
         self.models = models
 
     def _dump_primary(self):

@@ -1,4 +1,4 @@
-from . import resource_linkage, link_builder
+from . import link_builder, resource_linkage
 
 
 def dump(relationship, model):
