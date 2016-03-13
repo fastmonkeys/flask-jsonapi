@@ -39,6 +39,7 @@ def app():
     app.config['SQLALCHEMY_DATABASE_URI'] = (
         'postgres://localhost/flask_json_api'
     )
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['TESTING'] = True
     app.response_class = JSONResponse
     with app.app_context():

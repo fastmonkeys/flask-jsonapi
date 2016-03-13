@@ -1,4 +1,5 @@
 import pytest
+import datetime
 
 from flask_jsonapi.serialization import attributes_object
 
@@ -14,13 +15,13 @@ def book(models, fantasy_database):
     ({'author'}, {}),
     (None, {
         'title': 'The Fellowship of the Ring',
-        'date_published': '1954-07-29'
+        'date_published': datetime.date(1954, 7, 29)
     }),
 ])
 def test_dump(resource_registry, book, fields, output):
     resource = resource_registry.by_type['books']
     assert attributes_object.dump(
         resource=resource,
-        obj=book,
+        model=book,
         fields=fields
     ) == output

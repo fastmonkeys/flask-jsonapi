@@ -1,16 +1,11 @@
 from __future__ import unicode_literals
 
 import datetime
+from collections import OrderedDict
 
 import pytest
 
-from flask_jsonapi.params import Parameters
 from flask_jsonapi.serialization import resource_document
-
-
-@pytest.fixture
-def books(db, models, fantasy_database):
-    return db.session.query(models.Book).all()
 
 
 @pytest.fixture
@@ -32,9 +27,9 @@ def test_single_resource(jsonapi, resource_registry, book, db):
         "data": {
             "type": "books",
             "id": "11",
-            # "links": {
-            #     "self": "http://example.com/books/11"
-            # },
+            "links": {
+                "self": "http://example.com/books/11"
+            },
             "attributes": {
                 "title": "The Hobbit",
                 "date_published": datetime.date(1937, 9, 21)
@@ -42,10 +37,9 @@ def test_single_resource(jsonapi, resource_registry, book, db):
             "relationships": {
                 "author": {
                     "links": {
-                        # "self": (
-                        #     "http://example.com/books/11/relationships/author"
-                        # ),
-                        # "related": "http://example.com/books/11/author"
+                        "self":
+                            "http://example.com/books/11/relationships/author",
+                        "related": "http://example.com/books/11/author"
                     },
                     "data": {
                         "type": "authors",
@@ -54,11 +48,10 @@ def test_single_resource(jsonapi, resource_registry, book, db):
                 },
                 "chapters": {
                     "links": {
-                        # "self": (
-                        #     "http://example.com/books/11/relationships"
-                        #     "/chapters"
-                        # ),
-                        # "related": "http://example.com/books/11/chapters"
+                        "self":
+                            "http://example.com/books/11/relationships"
+                            "/chapters",
+                        "related": "http://example.com/books/11/chapters"
                     },
                     "data": [
                         {"id": "271", "type": "chapters"},
@@ -84,19 +77,17 @@ def test_single_resource(jsonapi, resource_registry, book, db):
                 },
                 "series": {
                     "links": {
-                    #     "self": (
-                    #         "http://example.com/books/11/relationships/series"
-                    #     ),
-                    #     "related": "http://example.com/books/11/series"
+                        "self":
+                            "http://example.com/books/11/relationships/series",
+                        "related": "http://example.com/books/11/series"
                     },
                     "data": None
                 },
                 "stores": {
                     "links": {
-                        # "self": (
-                        #     "http://example.com/books/11/relationships/stores"
-                        # ),
-                        # "related": "http://example.com/books/11/stores"
+                        "self":
+                            "http://example.com/books/11/relationships/stores",
+                        "related": "http://example.com/books/11/stores"
                     },
                 }
             }
@@ -124,19 +115,18 @@ def test_sparse_fieldsets(jsonapi, resource_registry, book, db):
         "data": {
             "type": "books",
             "id": "11",
-            # "links": {
-            #     "self": "http://example.com/books/11"
-            # },
+            "links": {
+                "self": "http://example.com/books/11"
+            },
             "attributes": {
                 "title": "The Hobbit",
             },
             "relationships": {
                 "author": {
                     "links": {
-                        # "self": (
-                        #     "http://example.com/books/11/relationships/author"
-                        # ),
-                        # "related": "http://example.com/books/11/author"
+                        "self":
+                            "http://example.com/books/11/relationships/author",
+                        "related": "http://example.com/books/11/author"
                     },
                     "data": {
                         "type": "authors",
@@ -160,12 +150,12 @@ def test_inclusion_of_related_resources(
             'chapters': {'title'},
             'series': {'title', 'books'},
         },
-        include={
-            'books': {
-                'author': {},
-                'chapters': {}
-            }
-        }
+        include=OrderedDict([
+            ('books', OrderedDict([
+                ('author', OrderedDict()),
+                ('chapters', OrderedDict()),
+            ]))
+        ])
     )
     assert len(data['included']) == 66
     assert data == {
@@ -988,18 +978,3 @@ def test_inclusion_of_related_resources(
             }
         ]
     }
-
-
-def test_resource_collection(jsonapi, resource_registry, books, db):
-    params = Parameters(
-        resource_registry=resource_registry,
-        type='books',
-        params={}
-    )
-    data = serialization.document.dump(
-        resource_registry=resource_registry,
-        params=params,
-        input=books,
-        many=True
-    )
-    assert len(data['data']) == 11

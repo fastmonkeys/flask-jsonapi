@@ -11,7 +11,10 @@ def book(models, fantasy_database):
 @pytest.mark.parametrize('fields,output', [
     (set(), {
         'type': 'books',
-        'id': '1'
+        'id': '1',
+        'links': {
+            'self': 'http://example.com/books/1'
+        }
     }),
     ({'title', 'author', 'stores'}, {
         'type': 'books',
@@ -22,11 +25,20 @@ def book(models, fantasy_database):
         'relationships': {
             'author': {
                 'data': {'type': 'authors', 'id': '1'},
-                'links': {}
+                'links': {
+                    'self': 'http://example.com/books/1/relationships/author',
+                    'related': 'http://example.com/books/1/author'
+                }
             },
             'stores': {
-                'links': {}
+                'links': {
+                    'self': 'http://example.com/books/1/relationships/stores',
+                    'related': 'http://example.com/books/1/stores'
+                }
             }
+        },
+        'links': {
+            'self': 'http://example.com/books/1'
         }
     }),
 ])
@@ -34,6 +46,6 @@ def test_dump(resource_registry, book, fields, output):
     resource = resource_registry.by_type['books']
     assert resource_object.dump(
         resource=resource,
-        obj=book,
+        model=book,
         fields=fields
     ) == output

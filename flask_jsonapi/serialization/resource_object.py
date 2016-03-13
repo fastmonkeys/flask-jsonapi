@@ -1,4 +1,4 @@
-from . import attributes_object, relationships_object, resource_identifier
+from . import attributes_object, relationships_object, resource_identifier, link_builder
 
 
 def dump(resource, model, fields):
@@ -20,10 +20,11 @@ def dump(resource, model, fields):
     if relationships:
         data['relationships'] = relationships
 
-    # TODO:
-    # data['links'] = dump_individual_resource_links(
-    #     type=data['type'],
-    #     id=data['id']
-    # )
+    data['links'] = {
+        'self': link_builder.resource_self_link(
+            resource=resource,
+            model=model
+        )
+    }
 
     return data

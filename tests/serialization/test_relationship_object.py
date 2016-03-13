@@ -12,15 +12,15 @@ def book(models, fantasy_database):
     ('author', {
         'data': {'type': 'authors', 'id': '1'},
         'links': {
-            # 'relationship': '/books/11/relationship/author',
-            # 'related': '/books/11/author',
+            'self': 'http://example.com/books/11/relationships/author',
+            'related': 'http://example.com/books/11/author',
         }
     }),
     ('series', {
         'data': None,
         'links': {
-            # 'relationship': '/books/11/relationship/series',
-            # 'related': '/books/11/series',
+            'self': 'http://example.com/books/11/relationships/series',
+            'related': 'http://example.com/books/11/series',
         }
     }),
     ('chapters', {
@@ -46,14 +46,14 @@ def book(models, fantasy_database):
             {'type': 'chapters', 'id': '289'},
         ],
         'links': {
-            # 'relationship': '/books/11/relationship/chapters',
-            # 'related': '/books/11/chapters',
+            'self': 'http://example.com/books/11/relationships/chapters',
+            'related': 'http://example.com/books/11/chapters',
         }
     }),
     ('stores', {
         'links': {
-            # 'relationship': '/books/11/relationship/stores',
-            # 'related': '/books/11/stores',
+            'self': 'http://example.com/books/11/relationships/stores',
+            'related': 'http://example.com/books/11/stores',
         }
     }),
 ])
@@ -61,5 +61,5 @@ def test_dump(resource_registry, book, relationship_name, output):
     resource = resource_registry.by_type['books']
     assert relationship_object.dump(
         relationship=resource.relationships[relationship_name],
-        obj=book
+        model=book
     ) == output
