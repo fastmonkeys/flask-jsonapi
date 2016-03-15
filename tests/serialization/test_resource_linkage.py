@@ -1,5 +1,6 @@
 import pytest
 
+from flask_jsonapi.errors import JSONAPIException
 from flask_jsonapi.serialization import resource_linkage
 
 
@@ -39,3 +40,52 @@ def test_dump(resource_registry, book, relationship_name, output):
         relationship=resource.relationships[relationship_name],
         related=getattr(book, relationship_name)
     ) == output
+
+
+def test_load_empty_to_one(resource_registry):
+    resource = resource_registry.by_type['books']
+    assert resource_linkage.load(
+        relationship=resource.relationships['author'],
+        data=None
+    ) is None
+
+
+def test_load_to_one(resource_registry, fantasy_database, models):
+    resource = resource_registry.by_type['books']
+    author = models.Author.query.get(1)
+    assert resource_linkage.load(
+        relationship=resource.relationships['author'],
+        data={'type': 'authors', 'id': '1'}
+    ) is author
+
+
+def test_load_to_many(resource_registry, fantasy_database, models):
+    resource = resource_registry.by_type['books']
+    chapters = [
+        models.Chapter.query.get(1),
+        models.Chapter.query.get(2),
+    ]
+    assert resource_linkage.load(
+        relationship=resource.relationships['chapters'],
+        data=[
+            {'type': 'chapters', 'id': '1'},
+            {'type': 'chapters', 'id': '2'},
+        ]
+    ) == chapters
+
+
+def test_load_invalid(resource_registry, fantasy_database, models):
+    resource = resource_registry.by_type['books']
+    with pytest.raises(JSONAPIException) as excinfo:
+        resource_linkage.load(
+            relationship=resource.relationships['chapters'],
+            data=[
+                {'type': 'chapters', 'id': '1'},
+                {'type': 'chapters'},
+            ]
+        )
+
+    errors = excinfo.value.errors
+    assert len(errors) == 1
+    assert errors[0].detail == '"id" is a required property'
+    assert errors[0].source_pointer == '/1'
