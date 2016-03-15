@@ -29,6 +29,7 @@ class _ResourceIdentifier(_parsers.Object):
             properties={
                 'type': _ResourceType(resource),
                 'id': _ResourceId(resource),
+                'meta': _parsers.Object(additional_properties=True)
             },
             required=['type', 'id']
         )

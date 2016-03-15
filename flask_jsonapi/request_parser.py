@@ -182,14 +182,6 @@ class RequestParser(object):
                     raise
         return objs
 
-    def _parse_to_one_resource_linkage(self, relationship, data, path):
-        if data is not None:
-            return self._parse_resource_identifier(
-                resource=relationship.resource,
-                data=data,
-                path=path
-            )
-
     def _validate_type(self, expected_type, data, path):
         _ensure_string(data=data, path=path)
         if data != expected_type:
