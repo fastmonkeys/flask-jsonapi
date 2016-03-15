@@ -6,7 +6,7 @@ from ..errors import JSONAPIException, ValidationError
 
 class Object(object):
     def __init__(
-        self, properties=None, required=None, additional_properties=False
+        self, properties=None, required=None, additional_properties=True
     ):
         self.properties = properties or {}
         self.required = required or []

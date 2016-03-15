@@ -33,7 +33,7 @@ def test_object_invalid_properties():
 
 
 def test_object_one_additional_property():
-    parser = _parsers.Object()
+    parser = _parsers.Object(additional_properties=False)
     with pytest.raises(JSONAPIException) as excinfo:
         parser({'foo': 1})
 
@@ -47,7 +47,7 @@ def test_object_one_additional_property():
 
 
 def test_object_many_additional_properties():
-    parser = _parsers.Object()
+    parser = _parsers.Object(additional_properties=False)
     with pytest.raises(JSONAPIException) as excinfo:
         parser({'foo': 1, 'bar': 2})
 

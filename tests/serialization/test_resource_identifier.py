@@ -41,14 +41,6 @@ def test_dump(resource_registry, book):
             '1 is not of type \'string\''
         ),
         (
-            {'type': 'books', 'id': '1', 'meta': []},
-            '[] is not of type \'object\''
-        ),
-        (
-            {'type': 'books', 'id': '1', 'foo': 'bar'},
-            'Additional properties are not allowed ("foo" was unexpected)'
-        ),
-        (
             {'type': 'books', 'id': 'asd'},
             '"asd" is not a valid int'
         ),
@@ -89,14 +81,5 @@ def test_load(resource_registry, fantasy_database, book):
     model = resource_identifier.load(
         resource=resource,
         data={'type': 'books', 'id': '1'}
-    )
-    assert model is book
-
-
-def test_load_with_meta(resource_registry, fantasy_database, book):
-    resource = resource_registry.by_type['books']
-    model = resource_identifier.load(
-        resource=resource,
-        data={'type': 'books', 'id': '1', 'meta': {'foo': 'bar'}}
     )
     assert model is book
