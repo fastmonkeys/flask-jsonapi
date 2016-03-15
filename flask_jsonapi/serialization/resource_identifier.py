@@ -17,33 +17,24 @@ def dump(resource, model):
     }
 
 
-def load(resource, data):
-    parser = _ResourceIdentifier(resource)
-    return parser(data)
-
-
-class _ResourceIdentifier(_parsers.Object):
-    def __init__(self, resource):
-        self.resource = resource
-        super(_ResourceIdentifier, self).__init__(
-            properties={
-                'type': _ResourceType(resource),
-                'id': _ResourceId(resource),
-            },
-            required=['type', 'id']
+def load(resource, raw_data):
+    parser = _parsers.Object(
+        properties={
+            'type': _ResourceType(resource),
+            'id': _ResourceId(resource),
+        },
+        required=['type', 'id']
+    )
+    data = parser(raw_data)
+    try:
+        return resource.store.fetch_one(id=data['id'])
+    except ObjectNotFound:
+        error = ResourceNotFound(
+            type=resource.type,
+            id=raw_data['id'],
+            source_path=[]
         )
-
-    def __call__(self, raw_data):
-        data = super(_ResourceIdentifier, self).__call__(raw_data)
-        try:
-            return self.resource.store.fetch_one(id=data['id'])
-        except ObjectNotFound:
-            error = ResourceNotFound(
-                type=self.resource.type,
-                id=raw_data['id'],
-                source_path=[]
-            )
-            raise JSONAPIException(error)
+        raise JSONAPIException(error)
 
 
 class _ResourceType(_parsers.String):

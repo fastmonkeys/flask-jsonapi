@@ -46,7 +46,7 @@ def test_load_empty_to_one(resource_registry):
     resource = resource_registry.by_type['books']
     assert resource_linkage.load(
         relationship=resource.relationships['author'],
-        data=None
+        raw_data=None
     ) is None
 
 
@@ -55,7 +55,7 @@ def test_load_to_one(resource_registry, fantasy_database, models):
     author = models.Author.query.get(1)
     assert resource_linkage.load(
         relationship=resource.relationships['author'],
-        data={'type': 'authors', 'id': '1'}
+        raw_data={'type': 'authors', 'id': '1'}
     ) is author
 
 
@@ -67,7 +67,7 @@ def test_load_to_many(resource_registry, fantasy_database, models):
     ]
     assert resource_linkage.load(
         relationship=resource.relationships['chapters'],
-        data=[
+        raw_data=[
             {'type': 'chapters', 'id': '1'},
             {'type': 'chapters', 'id': '2'},
         ]
@@ -79,7 +79,7 @@ def test_load_invalid(resource_registry, fantasy_database, models):
     with pytest.raises(JSONAPIException) as excinfo:
         resource_linkage.load(
             relationship=resource.relationships['chapters'],
-            data=[
+            raw_data=[
                 {'type': 'chapters', 'id': '1'},
                 {'type': 'chapters'},
             ]

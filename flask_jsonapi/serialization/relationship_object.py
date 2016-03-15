@@ -1,4 +1,4 @@
-from . import link_builder, resource_linkage
+from . import _parsers, link_builder, resource_linkage
 
 
 def dump(relationship, model):
@@ -20,3 +20,16 @@ def dump(relationship, model):
             related=getattr(model, relationship.name),
         )
     return data
+
+
+def load(relationship, raw_data):
+    parser = _parsers.Object(
+        properties={
+            'data': lambda raw_data: resource_linkage.load(
+                relationship=relationship,
+                raw_data=raw_data
+            )
+        },
+        required=['data']
+    )
+    return parser(raw_data)['data']

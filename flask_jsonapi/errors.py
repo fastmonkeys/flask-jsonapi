@@ -48,7 +48,7 @@ class Error(object):
         }
 
     def __str__(self):
-        return self.detail
+        return '{}: {}'.format(self.source_pointer, self.detail)
 
 
 class JSONAPIException(Exception):

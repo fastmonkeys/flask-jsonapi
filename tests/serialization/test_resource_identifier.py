@@ -18,7 +18,7 @@ def test_dump(resource_registry, book):
 
 
 @pytest.mark.parametrize(
-    'data,error',
+    'raw_data,error',
     [
         (
             [],
@@ -50,10 +50,10 @@ def test_dump(resource_registry, book):
         ),
     ]
 )
-def test_load_invalid(resource_registry, data, error):
+def test_load_invalid(resource_registry, raw_data, error):
     resource = resource_registry.by_type['books']
     with pytest.raises(JSONAPIException) as excinfo:
-        resource_identifier.load(resource=resource, data=data)
+        resource_identifier.load(resource=resource, raw_data=raw_data)
 
     errors = excinfo.value.errors
     assert len(errors) == 1
@@ -65,7 +65,7 @@ def test_load_resource_not_found(resource_registry, fantasy_database):
     with pytest.raises(JSONAPIException) as excinfo:
         resource_identifier.load(
             resource=resource,
-            data={'type': 'books', 'id': '123123'}
+            raw_data={'type': 'books', 'id': '123123'}
         )
 
     errors = excinfo.value.errors
@@ -80,6 +80,6 @@ def test_load(resource_registry, fantasy_database, book):
     resource = resource_registry.by_type['books']
     model = resource_identifier.load(
         resource=resource,
-        data={'type': 'books', 'id': '1'}
+        raw_data={'type': 'books', 'id': '1'}
     )
     assert model is book
