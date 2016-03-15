@@ -3,7 +3,7 @@ import pytest
 
 @pytest.fixture(params=[
     'flask_jsonapi.controllers.default.DefaultController',
-    'flask_jsonapi.controllers.postgresql.PostgreSQLController',
+    # 'flask_jsonapi.controllers.postgresql.PostgreSQLController',
 ])
 def controller_class(request):
     return request.param

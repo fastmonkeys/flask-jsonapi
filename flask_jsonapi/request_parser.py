@@ -190,28 +190,6 @@ class RequestParser(object):
                 path=path
             )
 
-    def _parse_resource_identifier(self, resource, data, path):
-        _ensure_object(data=data, path=path)
-        _require_property(data=data, property_='type', path=path)
-        _require_property(data=data, property_='id', path=path)
-        self._validate_type(
-            expected_type=resource.type,
-            data=data['type'],
-            path=path + ['type']
-        )
-        _ensure_string(data=data['id'], path=path + ['id'])
-        try:
-            return resource.store.fetch_one(
-                model_class=resource.model_class,
-                id=data['id']
-            )
-        except exceptions.ObjectNotFound:
-            raise errors.ResourceNotFound(
-                type=resource.type,
-                id=data['id'],
-                source_pointer=json_pointer_from_path(path)
-            )
-
     def _validate_type(self, expected_type, data, path):
         _ensure_string(data=data, path=path)
         if data != expected_type:

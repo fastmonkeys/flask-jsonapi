@@ -1,21 +1,26 @@
-class Error(Exception):
-    id = None
-    status = None
-    title = None
-    detail = None
-    source_pointer = None
-    source_parameter = None
-    meta = None
+import json
 
-    def __init__(self):
-        if self.detail:
-            self.detail = self.detail.format(self=self)
-        if self.source_parameter:
-            self.source_parameter = self.source_parameter.format(self=self)
+
+class Error(object):
+    def __init__(
+        self, id=None, code=None, status=None, title=None, detail=None,
+        source_path=None, source_parameter=None, meta=None
+    ):
+        self.id = id
+        self.code = code
+        self.status = status
+        self.title = title
+        self.detail = detail
+        self.source_path = source_path
+        self.source_parameter = source_parameter
+        self.meta = meta
 
     @property
-    def code(self):
-        return self.__class__.__name__
+    def source_pointer(self):
+        if self.source_path is not None:
+            if self.source_path:
+                return '/' + '/'.join(str(part) for part in self.source_path)
+            return ''
 
     @property
     def source(self):
@@ -27,7 +32,7 @@ class Error(Exception):
         return source or None
 
     @property
-    def as_dict(self):
+    def as_json(self):
         properties = (
             'id',
             'code',
@@ -46,6 +51,30 @@ class Error(Exception):
         return self.detail
 
 
+class JSONAPIException(Exception):
+    def __init__(self, *errors):
+        if not errors:
+            raise Exception('at least one error required')
+        self.errors = errors
+
+    @property
+    def status_code(self):
+        status_codes = {error.status_code for error in self.errors}
+        if len(status_codes) > 1:
+            return '400'
+        else:
+            return self.errors[0].status_code
+
+    @property
+    def as_json(self):
+        return {
+            'errors': [error.as_json for error in self.errors]
+        }
+
+    def __str__(self):
+        return str(self.errors[0])
+
+
 class ResourceTypeNotFound(Error):
     status = '404'
     title = 'Resource type not found'
@@ -57,18 +86,20 @@ class ResourceTypeNotFound(Error):
 
 
 class ResourceNotFound(Error):
-    status = '404'
-    title = 'Resource not found'
-    detail = (
-        'The resource identified by ({self.type}, {self.id}) type-id pair '
-        'could not be found.'
-    )
-
-    def __init__(self, type, id, source_pointer=None):
-        self.type = type
-        self.id = id
-        self.source_pointer = source_pointer
-        Error.__init__(self)
+    def __init__(self, type, id, source_path):
+        detail = (
+            'The resource identified by ({type}, {id}) type-id pair could not '
+            'be found.'
+        ).format(
+            type=json.dumps(type),
+            id=json.dumps(id)
+        )
+        Error.__init__(
+            self,
+            status='404',
+            title='Resource not found',
+            detail=detail
+        )
 
 
 class RelationshipNotFound(Error):
@@ -217,24 +248,32 @@ class InvalidJSON(Error):
 
 
 class ValidationError(Error):
-    status = '400'
-    title = 'Validation error'
-
-    def __init__(self, detail, source_pointer):
-        self.detail = detail
-        self.source_pointer = source_pointer
-        Error.__init__(self)
+    def __init__(self, detail, source_path):
+        Error.__init__(
+            self,
+            status='400',
+            title='Validation error',
+            detail=detail,
+            source_path=source_path
+        )
 
 
 class TypeMismatch(Error):
-    status = '409'
-    title = 'Type mismatch'
-    detail = '{self.type} is not a valid type for this operation.'
-
-    def __init__(self, type, source_pointer=None):
-        self.type = type
-        self.source_pointer = source_pointer
-        Error.__init__(self)
+    def __init__(self, actual_type, expected_type, source_path):
+        detail = (
+            '{actual} is not a valid type for this operation (expected '
+            '{expected})'
+        ).format(
+            actual=json.dumps(actual_type),
+            expected=json.dumps(expected_type)
+        )
+        Error.__init__(
+            self,
+            status='409',
+            title='Type mismatch',
+            detail=detail,
+            source_path=source_path
+        )
 
 
 class IDMismatch(Error):

@@ -20,7 +20,7 @@ class Resource(object):
         self._add_fields(fields)
         self.paginator = PagedPaginator() if paginator is None else paginator
         self.allow_client_generated_ids = allow_client_generated_ids
-        self.id_type = int
+        self.id_deserializer = int
 
     def _add_fields(self, fields):
         for field in fields:
@@ -41,14 +41,14 @@ class Resource(object):
             raise TypeError('expected Field')
 
         if field.name in self.fields:
-            raise exceptions.FieldNamingConflict(
+            raise ValueError(
                 'The resource already has a field called {field!r}.'.format(
                     field=field.name
                 )
             )
 
         if field.name in {'id', 'type'}:
-            raise exceptions.FieldNamingConflict(
+            raise ValueError(
                 "A resource cannot have a field named 'type' or 'id'."
             )
 

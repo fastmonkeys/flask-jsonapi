@@ -137,7 +137,4 @@ class SQLAlchemyStore(object):
 
     def _get_relationship_property(self, relationship):
         mapper = sqlalchemy.inspect(self.model_class)
-        try:
-            return mapper.relationships[relationship]
-        except KeyError:
-            raise exceptions.InvalidRelationship(self.model_class, relationship)
+        return mapper.relationships[relationship]

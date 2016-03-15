@@ -6,6 +6,7 @@ import pytest
 from bunch import Bunch
 from flask import Flask, Response
 from flask_sqlalchemy import SQLAlchemy
+from marshmallow import Schema, fields
 from werkzeug.utils import import_string
 
 from flask_jsonapi import JSONAPI
@@ -68,14 +69,23 @@ def jsonapi(app, controller_class, db, models):
         controller_class=import_string(controller_class)
     )
 
+    class SeriesSchema(Schema):
+        title = fields.Str(required=True)
+
     series = Resource(
         type='series',
         fields=[
             Attribute('title'),
             ToManyRelationship('books', type='books', allow_include=True),
         ],
+        schema=SeriesSchema(),
         store=SQLAlchemyStore(session=db.session, model_class=models.Series),
     )
+
+    class AuthorSchema(Schema):
+        name = fields.Str(required=True)
+        date_of_birth = fields.Date(required=True)
+        date_of_death = fields.Date()
 
     authors = Resource(
         type='authors',
@@ -86,8 +96,13 @@ def jsonapi(app, controller_class, db, models):
             ToManyRelationship('books', type='books'),
         ],
         store=SQLAlchemyStore(session=db.session, model_class=models.Author),
+        schema=AuthorSchema(),
         allow_client_generated_ids=True,
     )
+
+    class BookSchema(Schema):
+        title = fields.Str(required=True)
+        date_published = fields.Date(required=True)
 
     books = Resource(
         type='books',
@@ -104,8 +119,13 @@ def jsonapi(app, controller_class, db, models):
             ToOneRelationship('series', type='series'),
             ToManyRelationship('stores', type='stores'),
         ],
+        schema=BookSchema(),
         store=SQLAlchemyStore(session=db.session, model_class=models.Book),
     )
+
+    class ChapterSchema(Schema):
+        title = fields.Str(required=True)
+        ordering = fields.Int(required=True)
 
     chapters = Resource(
         type='chapters',
@@ -114,8 +134,12 @@ def jsonapi(app, controller_class, db, models):
             Attribute('ordering'),
             ToOneRelationship('book', type='books'),
         ],
+        schema=ChapterSchema(),
         store=SQLAlchemyStore(session=db.session, model_class=models.Chapter),
     )
+
+    class StoreSchema(Schema):
+        name = fields.Str(required=True)
 
     stores = Resource(
         type='stores',
@@ -123,6 +147,7 @@ def jsonapi(app, controller_class, db, models):
             Attribute('name'),
             ToManyRelationship('books', type='books'),
         ],
+        schema=StoreSchema(),
         store=SQLAlchemyStore(session=db.session, model_class=models.Store),
     )
 
