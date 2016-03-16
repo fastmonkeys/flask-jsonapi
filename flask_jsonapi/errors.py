@@ -263,7 +263,8 @@ class TypeMismatch(Error):
         detail = (
             '{actual} is not a valid type for this operation (expected '
             '{expected})'
-        ).format(
+        )
+        detail = detail.format(
             actual=json.dumps(actual_type),
             expected=json.dumps(expected_type)
         )
@@ -288,14 +289,17 @@ class IDMismatch(Error):
 
 
 class FullReplacementDisallowed(Error):
-    status = '403'
-    title = 'Full replacement disallowed'
-    detail = 'Full replacement of {self.relationship} is not allowed.'
-
-    def __init__(self, relationship, source_pointer=None):
-        self.relationship = relationship
-        self.source_pointer = source_pointer
-        Error.__init__(self)
+    def __init__(self, relationship, source_path):
+        detail = 'Full replacement of {} relationship is disallowed'.format(
+            json.dumps(relationship)
+        )
+        Error.__init__(
+            self,
+            status='403',
+            title='Full replacement disallowed',
+            detail=detail,
+            source_path=source_path
+        )
 
 
 class ClientGeneratedIDsUnsupported(Error):

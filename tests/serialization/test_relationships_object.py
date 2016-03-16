@@ -1,5 +1,6 @@
 import pytest
 
+from flask_jsonapi.errors import JSONAPIException
 from flask_jsonapi.serialization import relationships_object
 
 
@@ -80,3 +81,58 @@ def test_dump(resource_registry, book, fields, output):
         model=book,
         fields=fields
     ) == output
+
+
+@pytest.mark.parametrize(
+    'raw_data,error',
+    [
+        ([], '[] is not of type \'object\''),
+        (
+            {'foo': None},
+            '"foo" is not a valid relationship for "books" resource'
+        ),
+        (
+            {'foo': None, 'bar': None},
+            '"bar", "foo" are not valid relationships for "books" resource'
+        ),
+        (
+            {'stores': {'data': []}},
+            'Full replacement of "stores" relationship is disallowed'
+        ),
+    ]
+)
+def test_load_invalid(resource_registry, raw_data, error):
+    resource = resource_registry.by_type['books']
+    with pytest.raises(JSONAPIException) as excinfo:
+        relationships_object.load(resource=resource, raw_data=raw_data)
+
+    errors = excinfo.value.errors
+    assert len(errors) == 1
+    assert errors[0].detail == error
+
+
+def test_load(resource_registry, models, fantasy_database):
+    resource = resource_registry.by_type['books']
+    output = relationships_object.load(
+        resource=resource,
+        raw_data={
+            'author': {
+                'data': {'type': 'authors', 'id': '1'}
+            },
+            'chapters': {
+                'data': [
+                    {'type': 'chapters', 'id': '1'},
+                    {'type': 'chapters', 'id': '2'},
+                ]
+            }
+        }
+    )
+
+    author = models.Author.query.get(1)
+    chapters = [
+        models.Chapter.query.get(1),
+        models.Chapter.query.get(2),
+    ]
+    assert len(output) == 2
+    assert output['author'] is author
+    assert output['chapters'] == chapters

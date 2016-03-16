@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-from . import _compat, errors, exceptions
+from . import _compat, errors
 
 ParseResult = namedtuple('ParseResult', ('id', 'fields'))
 
@@ -74,68 +74,6 @@ class RequestParser(object):
                     '{attribute!r} is not a valid attribute for {type!r} '
                     'resource'
                 ).format(attribute=attribute_name, type=self.resource.type),
-                source_pointer=json_pointer_from_path(path)
-            )
-
-    def parse_relationships_object(self, data, path):
-        _ensure_object(data, path)
-        self._check_extra_relationships(data, path)
-        return self._parse_relationships(data, path)
-
-    def _check_extra_relationships(self, data, path):
-        for relationship_name in data:
-            self._check_extra_relationship(
-                relationship_name=relationship_name,
-                path=path + [relationship_name]
-            )
-
-    def _check_extra_relationship(self, relationship_name, path):
-        if relationship_name not in self.resource.relationships:
-            raise errors.ValidationError(
-                detail=(
-                    '{relationship!r} is not a valid relationship for '
-                    '{type!r} resource'
-                ).format(
-                    relationship=relationship_name,
-                    type=self.resource.type
-                ),
-                source_pointer=json_pointer_from_path(path)
-            )
-
-    def _parse_relationships(self, data, path):
-        return {
-            relationship_name: self.parse_relationship_object(
-                relationship=self.resource.relationships[relationship_name],
-                data=data[relationship_name],
-                path=path + [relationship_name],
-                check_full_replacement=True
-            )
-            for relationship_name in data
-        }
-
-    def parse_relationship_object(
-        self,
-        relationship,
-        data,
-        path,
-        check_full_replacement=False,
-        ignore_not_found=False
-    ):
-        if check_full_replacement:
-            self._check_full_replacement(relationship=relationship, path=path)
-        _ensure_object(data, path)
-        _require_property(data, 'data', path)
-        return self._parse_resource_linkage(
-            relationship=relationship,
-            data=data['data'],
-            path=path + ['data'],
-            ignore_not_found=ignore_not_found
-        )
-
-    def _check_full_replacement(self, relationship, path):
-        if relationship.many and not relationship.allow_full_replacement:
-            raise errors.FullReplacementDisallowed(
-                relationship=relationship.name,
                 source_pointer=json_pointer_from_path(path)
             )
 

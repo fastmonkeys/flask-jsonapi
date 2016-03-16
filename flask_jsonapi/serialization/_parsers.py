@@ -55,18 +55,26 @@ class Object(object):
     def _check_additional_properties(self):
         extra = set(self._raw_data.keys()) - set(self.properties)
         if not self.additional_properties and extra:
-            detail = (
-                'Additional properties are not allowed ({extra} {verb} '
-                'unexpected)'
-            ).format(
-                extra=', '.join(
-                    json.dumps(property_name)
-                    for property_name in sorted(extra)
-                ),
-                verb='was' if len(extra) == 1 else 'were'
-            )
+            detail = self._build_additional_properties_message(extra)
             error = ValidationError(detail=detail, source_path=[])
             self._errors.append(error)
+
+    def _build_additional_properties_message(self, extra):
+        msg = (
+            'Additional properties are not allowed ({extra} {verb} '
+            'unexpected)'
+        )
+        msg = msg.format(
+            extra=self._build_property_list_message(extra),
+            verb='was' if len(extra) == 1 else 'were'
+        )
+        return msg
+
+    def _build_property_list_message(self, properties):
+        return ', '.join(
+            json.dumps(property_name)
+            for property_name in sorted(properties)
+        )
 
 
 class Array(object):

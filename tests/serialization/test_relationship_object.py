@@ -86,6 +86,21 @@ def test_load_invalid(resource_registry, raw_data, error):
     assert errors[0].detail == error
 
 
+def test_load_full_replacement_disallowed(resource_registry):
+    resource = resource_registry.by_type['books']
+    with pytest.raises(JSONAPIException) as excinfo:
+        relationship_object.load(
+            relationship=resource.relationships['stores'],
+            raw_data={'data': []},
+            replace=True
+        )
+
+    errors = excinfo.value.errors
+    detail = 'Full replacement of "stores" relationship is disallowed'
+    assert len(errors) == 1
+    assert errors[0].detail == detail
+
+
 def test_load(resource_registry, models, fantasy_database):
     resource = resource_registry.by_type['books']
     author = models.Author.query.get(1)
