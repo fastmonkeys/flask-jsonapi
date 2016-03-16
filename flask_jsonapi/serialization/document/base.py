@@ -1,7 +1,7 @@
-from . import resource_identifier, resource_object
+from .. import resource_identifier, resource_object
 
 
-class _DocumentSerializer(object):
+class _BaseSerializer(object):
     def __init__(self, resource, fields=None, include=None):
         self.resource = resource
         self.fields = {} if fields is None else fields

@@ -1,1 +1,1 @@
-from . import resource_collection_document
+from . import document

@@ -9,6 +9,8 @@ class Resource(object):
         store,
         fields,
         paginator=None,
+        attribute_serializer=None,
+        attribute_deserializer=None,
         allow_client_generated_ids=False
     ):
         self._registry = None
@@ -20,6 +22,8 @@ class Resource(object):
         self._add_fields(fields)
         self.paginator = PagedPaginator() if paginator is None else paginator
         self.allow_client_generated_ids = allow_client_generated_ids
+        self.attribute_serializer = attribute_serializer
+        self.attribute_deserializer = attribute_deserializer
         self.id_deserializer = int
 
     def _add_fields(self, fields):
@@ -51,6 +55,16 @@ class Resource(object):
             raise ValueError(
                 "A resource cannot have a field named 'type' or 'id'."
             )
+
+    def serialize_attributes(self, data):
+        if self.attribute_serializer:
+            return self.attribute_serializer(data)
+        return data
+
+    def deserialize_attributes(self, data):
+        if self.attribute_deserializer:
+            return self.attribute_deserializer(data)
+        return data
 
     def register(self, registry):
         if self._registry is not None:

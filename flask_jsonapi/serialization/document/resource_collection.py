@@ -1,15 +1,15 @@
 import itertools
 
-from . import document
+from .base import _BaseSerializer
 
 
 def dump(*args, **kwargs):
-    return _ResourceCollectionDocumentSerializer(*args, **kwargs).dump()
+    return _ResourceCollectionSerializer(*args, **kwargs).dump()
 
 
-class _ResourceCollectionDocumentSerializer(document._DocumentSerializer):
+class _ResourceCollectionSerializer(_BaseSerializer):
     def __init__(self, resource, models, **kwargs):
-        super(_ResourceCollectionDocumentSerializer, self).__init__(
+        super(_ResourceCollectionSerializer, self).__init__(
             resource,
             **kwargs
         )

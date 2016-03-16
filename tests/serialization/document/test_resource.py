@@ -1,11 +1,10 @@
 from __future__ import unicode_literals
 
-import datetime
 from collections import OrderedDict
 
 import pytest
 
-from flask_jsonapi.serialization import resource_document
+from flask_jsonapi.serialization import document
 
 
 @pytest.fixture
@@ -19,7 +18,7 @@ def series(db, models, fantasy_database):
 
 
 def test_single_resource(jsonapi, resource_registry, book, db):
-    data = resource_document.dump(
+    data = document.resource.dump(
         resource=resource_registry.by_type['books'],
         model=book
     )
@@ -32,7 +31,7 @@ def test_single_resource(jsonapi, resource_registry, book, db):
             },
             "attributes": {
                 "title": "The Hobbit",
-                "date_published": datetime.date(1937, 9, 21)
+                "date_published": "1937-09-21"
             },
             "relationships": {
                 "author": {
@@ -96,7 +95,7 @@ def test_single_resource(jsonapi, resource_registry, book, db):
 
 
 def test_null_resource(jsonapi, resource_registry, db):
-    data = resource_document.dump(
+    data = document.resource.dump(
         resource=resource_registry.by_type['books'],
         model=None
     )
@@ -106,7 +105,7 @@ def test_null_resource(jsonapi, resource_registry, db):
 
 
 def test_sparse_fieldsets(jsonapi, resource_registry, book, db):
-    data = resource_document.dump(
+    data = document.resource.dump(
         resource=resource_registry.by_type['books'],
         model=book,
         fields={'books': {'title', 'author'}}
@@ -141,7 +140,7 @@ def test_sparse_fieldsets(jsonapi, resource_registry, book, db):
 def test_inclusion_of_related_resources(
     jsonapi, resource_registry, series, db
 ):
-    data = resource_document.dump(
+    data = document.resource.dump(
         resource=resource_registry.by_type['series'],
         model=series,
         fields={

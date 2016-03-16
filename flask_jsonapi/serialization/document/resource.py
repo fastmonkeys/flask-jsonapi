@@ -1,13 +1,13 @@
-from . import document
+from .base import _BaseSerializer
 
 
 def dump(*args, **kwargs):
-    return _ResourceDocumentSerializer(*args, **kwargs).dump()
+    return _ResourceSerializer(*args, **kwargs).dump()
 
 
-class _ResourceDocumentSerializer(document._DocumentSerializer):
+class _ResourceSerializer(_BaseSerializer):
     def __init__(self, resource, model, **kwargs):
-        super(_ResourceDocumentSerializer, self).__init__(resource, **kwargs)
+        super(_ResourceSerializer, self).__init__(resource, **kwargs)
         self.model = model
 
     def _dump_primary(self):

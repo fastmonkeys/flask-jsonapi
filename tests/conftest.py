@@ -78,7 +78,6 @@ def jsonapi(app, controller_class, db, models):
             Attribute('title'),
             ToManyRelationship('books', type='books', allow_include=True),
         ],
-        schema=SeriesSchema(),
         store=SQLAlchemyStore(session=db.session, model_class=models.Series),
     )
 
@@ -96,7 +95,6 @@ def jsonapi(app, controller_class, db, models):
             ToManyRelationship('books', type='books'),
         ],
         store=SQLAlchemyStore(session=db.session, model_class=models.Author),
-        schema=AuthorSchema(),
         allow_client_generated_ids=True,
     )
 
@@ -119,7 +117,8 @@ def jsonapi(app, controller_class, db, models):
             ToOneRelationship('series', type='series'),
             ToManyRelationship('stores', type='stores'),
         ],
-        schema=BookSchema(),
+        attribute_serializer=build_attribute_serializer(BookSchema),
+        attribute_deserializer=build_attribute_deserializer(BookSchema),
         store=SQLAlchemyStore(session=db.session, model_class=models.Book),
     )
 
@@ -134,7 +133,6 @@ def jsonapi(app, controller_class, db, models):
             Attribute('ordering'),
             ToOneRelationship('book', type='books'),
         ],
-        schema=ChapterSchema(),
         store=SQLAlchemyStore(session=db.session, model_class=models.Chapter),
     )
 
@@ -147,7 +145,6 @@ def jsonapi(app, controller_class, db, models):
             Attribute('name'),
             ToManyRelationship('books', type='books'),
         ],
-        schema=StoreSchema(),
         store=SQLAlchemyStore(session=db.session, model_class=models.Store),
     )
 
@@ -270,3 +267,19 @@ def models(db):
 @pytest.fixture
 def client(app, jsonapi):
     return app.test_client()
+
+
+def build_attribute_serializer(schema_cls):
+    def serialize(data):
+        schema = schema_cls()
+        result = schema.dump(data)
+        return result.data
+    return serialize
+
+
+def build_attribute_deserializer(schema_cls):
+    def deserialize(data):
+        schema = schema_cls()
+        result = schema.load(data)
+        return result.data
+    return deserialize

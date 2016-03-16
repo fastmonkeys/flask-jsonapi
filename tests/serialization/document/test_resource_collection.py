@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 import pytest
 
-from flask_jsonapi.serialization import resource_collection_document
+from flask_jsonapi.serialization import document
 
 
 @pytest.fixture
@@ -11,7 +11,7 @@ def books(db, models, fantasy_database):
 
 
 def test_resource_collection(jsonapi, resource_registry, books, db):
-    data = resource_collection_document.dump(
+    data = document.resource_collection.dump(
         resource=resource_registry.by_type['books'],
         models=books
     )
