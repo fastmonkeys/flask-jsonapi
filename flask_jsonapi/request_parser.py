@@ -16,13 +16,6 @@ class RequestParser(object):
         return self.parse_resource_object(data=data['data'], path=['data'])
 
     def parse_resource_object(self, data, path):
-        _ensure_object(data=data, path=path)
-        _require_property(data=data, property_='type', path=path)
-        self._validate_type(
-            expected_type=self.resource.type,
-            data=data['type'],
-            path=path + ['type']
-        )
         if self.id is not None:
             _require_property(data=data, property_='id', path=path)
         if 'id' in data:
@@ -54,28 +47,6 @@ class RequestParser(object):
             )
         )
         return fields
-
-    def parse_attributes_object(self, data, path):
-        _ensure_object(data, path)
-        self._check_extra_attributes(data, path)
-        return data
-
-    def _check_extra_attributes(self, data, path):
-        for attribute_name in data:
-            self._check_extra_attribute(
-                attribute_name=attribute_name,
-                path=path + [attribute_name]
-            )
-
-    def _check_extra_attribute(self, attribute_name, path):
-        if attribute_name not in self.resource.attributes:
-            raise errors.ValidationError(
-                detail=(
-                    '{attribute!r} is not a valid attribute for {type!r} '
-                    'resource'
-                ).format(attribute=attribute_name, type=self.resource.type),
-                source_pointer=json_pointer_from_path(path)
-            )
 
     def _parse_resource_linkage(
         self,

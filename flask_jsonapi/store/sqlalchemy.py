@@ -53,14 +53,8 @@ class SQLAlchemyStore(object):
         return query.all()
 
     def _query_related(self, model, relationship):
-        related_model_class = self.get_related_model_class(
-            self.model_class,
-            relationship
-        )
-        relationship_property = self._get_relationship_property(
-            self.model_class,
-            relationship
-        )
+        related_model_class = self._get_related_model_class(relationship)
+        relationship_property = self._get_relationship_property(relationship)
         query = self.session.query(related_model_class)
         query = query.filter(relationship_property._with_parent(model))
         if relationship_property.order_by:
@@ -91,32 +85,32 @@ class SQLAlchemyStore(object):
     def create(self, id, fields):
         if id is not None and self._exists(self.model_class, id):
             raise exceptions.ObjectAlreadyExists
-        instance = self.model_class(id=id, **fields)
-        self.session.add(instance)
+        model = self.model_class(id=id, **fields)
+        self.session.add(model)
         self.session.commit()
-        return instance
+        return model
 
-    def update(self, instance, fields):
+    def update(self, model, fields):
         for name, value in fields.items():
-            setattr(instance, name, value)
+            setattr(model, name, value)
         self.session.commit()
 
     def _exists(self, id):
         query = self.session.query(self.model_class).filter_by(id=id)
         return self.session.query(query.exists()).scalar()
 
-    def delete(self, instance):
-        self.session.delete(instance)
+    def delete(self, model):
+        self.session.delete(model)
         self.session.commit()
 
-    def create_relationship(self, instance, relationship, values):
-        collection = getattr(instance, relationship)
+    def create_relationship(self, model, relationship, values):
+        collection = getattr(model, relationship)
         for value in values:
             collection.append(value)
         self.session.commit()
 
-    def delete_relationship(self, instance, relationship, values):
-        collection = getattr(instance, relationship)
+    def delete_relationship(self, model, relationship, values):
+        collection = getattr(model, relationship)
         for value in values:
             try:
                 collection.remove(value)
@@ -124,7 +118,7 @@ class SQLAlchemyStore(object):
                 pass
         self.session.commit()
 
-    def get_related_model_class(self, relationship):
+    def _get_related_model_class(self, relationship):
         prop = self._get_relationship_property(self.model_class, relationship)
         return prop.mapper.class_
 

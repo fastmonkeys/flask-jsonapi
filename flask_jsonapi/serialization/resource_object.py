@@ -1,4 +1,5 @@
 from . import (
+    _parsers,
     attributes_object,
     link_builder,
     relationships_object,
@@ -33,3 +34,13 @@ def dump(resource, model, fields):
     }
 
     return data
+
+
+def load(resource, raw_data):
+    parser = _parsers.Object(
+        properties={
+            'type': resource_identifier._ResourceType(resource)
+        },
+        required=['type']
+    )
+    parser(raw_data)

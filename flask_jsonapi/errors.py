@@ -75,16 +75,6 @@ class JSONAPIException(Exception):
         return str(self.errors[0])
 
 
-class ResourceTypeNotFound(Error):
-    status = '404'
-    title = 'Resource type not found'
-    detail = '{self.type} is not a valid resource type.'
-
-    def __init__(self, type):
-        self.type = type
-        Error.__init__(self)
-
-
 class ResourceNotFound(Error):
     def __init__(self, type, id, source_path):
         detail = (
@@ -100,17 +90,6 @@ class ResourceNotFound(Error):
             title='Resource not found',
             detail=detail
         )
-
-
-class RelationshipNotFound(Error):
-    status = '404'
-    title = 'Relationship not found'
-    detail = '{self.relationship} is not a valid relationship for {self.type}.'
-
-    def __init__(self, type, relationship):
-        self.type = type
-        self.relationship = relationship
-        Error.__init__(self)
 
 
 class FieldTypeMissing(Error):

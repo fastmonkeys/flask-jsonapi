@@ -13,7 +13,7 @@ from ..exceptions import ObjectNotFound
 def dump(resource, model):
     return {
         'type': resource.type,
-        'id': str(getattr(model, 'id'))
+        'id': str(model.id)
     }
 
 
@@ -37,6 +37,7 @@ def load(resource, raw_data):
         raise JSONAPIException(error)
 
 
+# TODO: move this to better module
 class _ResourceType(_parsers.String):
     def __init__(self, resource):
         self.resource = resource

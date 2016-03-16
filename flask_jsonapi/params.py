@@ -3,6 +3,22 @@ from collections import OrderedDict
 from . import errors
 
 
+# fields[articles]=title,body&fields[people]=name
+
+# include=comments
+# include=comments.author
+# include=author,comments.author
+
+# sort=age
+# sort=age,name
+# sort=-created,title
+# sort=author.name
+
+# page[number]=2&page[size]=10
+# page[offset]=25&page[limit]=100
+
+# filter[title]=hello
+
 class Parameters(object):
     def __init__(self, resource_registry, type, params):
         resource = resource_registry.by_type[type]
