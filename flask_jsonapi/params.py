@@ -1,5 +1,6 @@
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 
+from .datastructures import Page
 from .errors import (
     InvalidField,
     InvalidFieldsFormat,
@@ -12,8 +13,6 @@ from .errors import (
     InvalidResourceType,
     JSONAPIException
 )
-
-Page = namedtuple('Page', ['number', 'size'])
 
 
 def parse_fields_parameter(resource_registry, value):

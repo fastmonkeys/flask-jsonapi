@@ -4,6 +4,7 @@ import sqlalchemy
 from sqlalchemy import orm
 
 from .. import exceptions
+from ..datastructures import Pagination
 
 
 class SQLAlchemyStore(object):
@@ -11,60 +12,50 @@ class SQLAlchemyStore(object):
         self.session = session
         self.model_class = model_class
 
-    def fetch(self, params=None):
-        query = self.query
-        if params:
-            query = self._include_related(query, params.include)
-            query = self._paginate(query, params.pagination)
-        return query.all()
-
-    def fetch_one(self, id, params=None):
-        query = self.query.filter_by(id=id)
-        if params:
-            query = self._include_related(query, params.include)
+    def fetch_one(self, id, **kwargs):
         try:
-            return query.one()
+            return self._fetch_one(query=self.query.filter_by(id=id), **kwargs)
         except orm.exc.NoResultFound:
             raise exceptions.ObjectNotFound
 
-    def count_related(self, model, relationship):
-        return self._query_related(model, relationship).count()
+    def fetch_many(self, **kwargs):
+        return self._fetch_many(query=self.query(), **kwargs)
 
-    def fetch_related(self, model, relationship, params=None):
-        if self.is_to_many_relationship(relationship):
-            return self._fetch_many_related(model, relationship, params)
-        else:
-            return self._fetch_one_related(model, relationship, params)
-
-    def _fetch_one_related(self, model, relationship, params):
-        query = self._query_related(model, relationship)
-        if params:
-            query = self._include_related(query, params.include)
+    def fetch_one_related(self, model, relationship, **kwargs):
         try:
-            return query.one()
+            return self._fetch_one(query=self.query.filter_by(id=id), **kwargs)
         except orm.exc.NoResultFound:
             return None
 
-    def _fetch_many_related(self, model, relationship, params):
-        query = self._query_related(model, relationship)
-        if params:
-            query = self._include_related(query, params.include)
-            query = self._paginate(query, params.pagination)
-        return query.all()
+    def fetch_many_related(self, model, relationship, **kwargs):
+        return self._fetch_many(
+            query=self._query_related(model, relationship),
+            **kwargs
+        )
+
+    def _fetch_one(self, query, include=None):
+        query = self._include_related(query, include=include)
+        return query.one()
+
+    def _fetch_many(self, query, include=None, page=None):
+        query = self._include_related(query, include=include)
+        query = self._paginate(query, page=page)
+        return Pagination(
+            page=page,
+            total=query.count(),
+            models=query.all()
+        )
 
     def _query_related(self, model, relationship):
-        related_model_class = self._get_related_model_class(relationship)
-        relationship_property = self._get_relationship_property(relationship)
+        mapper = sqlalchemy.inspect(self.model_class)
+        relationship_property = mapper.relationships[relationship]
+        related_model_class = relationship_property.mapper.class_
         query = self.session.query(related_model_class)
         query = query.filter(relationship_property._with_parent(model))
         if relationship_property.order_by:
             query = query.order_by(*relationship_property.order_by)
         return query
 
-    def count(self):
-        return self.query.count()
-
-    @property
     def query(self):
         return self.session.query(self.model_class)
 
@@ -77,9 +68,10 @@ class SQLAlchemyStore(object):
             query = query.options(option)
         return query
 
-    def _paginate(self, query, pagination):
-        if pagination is not None:
-            query = query.offset(pagination.offset).limit(pagination.limit)
+    def _paginate(self, query, page):
+        if page is not None:
+            query = query.offset((page.number - 1) * page.size)
+            query = query.limit(page.size)
         return query
 
     def create(self, id, fields):
@@ -117,18 +109,3 @@ class SQLAlchemyStore(object):
             except ValueError:
                 pass
         self.session.commit()
-
-    def _get_related_model_class(self, relationship):
-        prop = self._get_relationship_property(self.model_class, relationship)
-        return prop.mapper.class_
-
-    def is_to_many_relationship(self, relationship):
-        mapper = sqlalchemy.inspect(self.model_class)
-        return mapper.relationships[relationship].uselist
-
-    def validate_relationship(self, relationship):
-        self._get_relationship_property(relationship)
-
-    def _get_relationship_property(self, relationship):
-        mapper = sqlalchemy.inspect(self.model_class)
-        return mapper.relationships[relationship]
