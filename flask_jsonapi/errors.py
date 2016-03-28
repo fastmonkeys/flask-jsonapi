@@ -31,8 +31,7 @@ class Error(object):
             source['parameter'] = self.source_parameter
         return source or None
 
-    @property
-    def as_json(self):
+    def get_json(self):
         properties = (
             'id',
             'code',
@@ -65,10 +64,9 @@ class JSONAPIException(Exception):
         else:
             return self.errors[0].status
 
-    @property
-    def as_json(self):
+    def get_json(self):
         return {
-            'errors': [error.as_json for error in self.errors]
+            'errors': [error.get_json() for error in self.errors]
         }
 
     def __str__(self):
@@ -76,12 +74,12 @@ class JSONAPIException(Exception):
 
 
 class ResourceNotFound(Error):
-    def __init__(self, type, id, source_path):
+    def __init__(self, type, id):
         detail = (
-            'The resource identified by ({type}, {id}) type-id pair could not '
-            'be found.'
+            'The resource identified by type "{type}" and id "{id}") could '
+            'not be found'
         )
-        detail = detail.format(type=json.dumps(type), id=json.dumps(id))
+        detail = detail.format(type=type, id=id)
         Error.__init__(
             self,
             status='404',

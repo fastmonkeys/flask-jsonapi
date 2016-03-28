@@ -34,22 +34,29 @@ class JSONResponse(Response):
 
 
 @pytest.yield_fixture
-def app():
-    app = Flask(__name__)
+def app(db, resources):
+    app = JSONAPI(__name__)
+
     app.config['SERVER_NAME'] = 'example.com'
     app.config['SQLALCHEMY_DATABASE_URI'] = (
         'postgres://localhost/flask_json_api'
     )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['TESTING'] = True
+
+    db.init_app(app)
+
+    for resource in resources.values():
+        app.register_resource(resource)
+
     app.response_class = JSONResponse
     with app.app_context():
         yield app
 
 
 @pytest.fixture
-def db(app):
-    return SQLAlchemy(app)
+def db():
+    return SQLAlchemy()
 
 
 @pytest.fixture
@@ -58,21 +65,13 @@ def resource_registry(jsonapi):
 
 
 @pytest.fixture
-def controller_class():
-    return 'flask_jsonapi.controllers.default.DefaultController'
-
-
-@pytest.fixture
-def jsonapi(app, controller_class, db, models):
-    jsonapi = JSONAPI(
-        app,
-        controller_class=import_string(controller_class)
-    )
+def resources(db, models):
+    bunch = Bunch()
 
     class SeriesSchema(Schema):
         title = fields.Str(required=True)
 
-    series = Resource(
+    bunch.series = Resource(
         type='series',
         fields=[
             Attribute('title'),
@@ -86,7 +85,7 @@ def jsonapi(app, controller_class, db, models):
         date_of_birth = fields.Date(required=True)
         date_of_death = fields.Date()
 
-    authors = Resource(
+    bunch.authors = Resource(
         type='authors',
         fields=[
             Attribute('name'),
@@ -95,6 +94,7 @@ def jsonapi(app, controller_class, db, models):
             ToManyRelationship('books', type='books'),
         ],
         store=SQLAlchemyStore(session=db.session, model_class=models.Author),
+        attribute_serializer=build_attribute_serializer(AuthorSchema),
         allow_client_generated_ids=True,
     )
 
@@ -102,7 +102,7 @@ def jsonapi(app, controller_class, db, models):
         title = fields.Str(required=True)
         date_published = fields.Date(required=True)
 
-    books = Resource(
+    bunch.books = Resource(
         type='books',
         fields=[
             Attribute('title'),
@@ -126,7 +126,7 @@ def jsonapi(app, controller_class, db, models):
         title = fields.Str(required=True)
         ordering = fields.Int(required=True)
 
-    chapters = Resource(
+    bunch.chapters = Resource(
         type='chapters',
         fields=[
             Attribute('title'),
@@ -139,7 +139,7 @@ def jsonapi(app, controller_class, db, models):
     class StoreSchema(Schema):
         name = fields.Str(required=True)
 
-    stores = Resource(
+    bunch.stores = Resource(
         type='stores',
         fields=[
             Attribute('name'),
@@ -148,13 +148,7 @@ def jsonapi(app, controller_class, db, models):
         store=SQLAlchemyStore(session=db.session, model_class=models.Store),
     )
 
-    jsonapi.resources.register(series)
-    jsonapi.resources.register(authors)
-    jsonapi.resources.register(books)
-    jsonapi.resources.register(chapters)
-    jsonapi.resources.register(stores)
-
-    return jsonapi
+    return bunch
 
 
 @pytest.yield_fixture
@@ -265,7 +259,7 @@ def models(db):
 
 
 @pytest.fixture
-def client(app, jsonapi):
+def client(app):
     return app.test_client()
 
 

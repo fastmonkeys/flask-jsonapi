@@ -1,75 +1,50 @@
-from flask import Blueprint, current_app, jsonify
-from werkzeug.local import LocalProxy
+import qstring
+from flask import json, request
+from flask.views import MethodView
 
-from . import errors
-
-blueprint = Blueprint('jsonapi', __name__)
-
-controller = LocalProxy(lambda: current_app.extensions['jsonapi'].controller)
-
-
-@blueprint.after_request
-def set_response_content_type(response):
-    response.mimetype = 'application/vnd.api+json'
-    return response
+from . import serialization
+from .errors import JSONAPIException, ResourceNotFound
+from .exceptions import ObjectNotFound
+from .params import parse_fields_parameter, parse_include_parameter
 
 
-@blueprint.errorhandler(errors.Error)
-def handle_request_error(error):
-    return jsonify(errors=[error.as_dict]), error.status
+# @blueprint.after_request
+# def set_response_content_type(response):
+#     response.mimetype = 'application/vnd.api+json'
+#     return response
+#
 
 
-@blueprint.route('/<type>', methods=['GET'])
-def fetch(type):
-    return controller.fetch(type)
+class ResourceView(MethodView):
+    def __init__(self, resource):
+        self.resource = resource
+
+    def get(self, id):
+        params = qstring.nest(request.args.items(multi=True))
+        fields = parse_fields_parameter(
+            resource_registry=self.resource._registry,
+            value=params.get('fields')
+        )
+        include = parse_include_parameter(
+            resource=self.resource,
+            value=params.get('include')
+        )
+        try:
+            model = self.resource.store.fetch_one(id, include=include)
+        except ObjectNotFound:
+            raise JSONAPIException(ResourceNotFound(type=self.resource.type, id=id))
+        data = serialization.document.resource.dump(
+            resource=self.resource,
+            model=model,
+            fields=fields,
+            include=include
+        )
+        return json.dumps(data)
 
 
-@blueprint.route('/<type>/<id>', methods=['GET'])
-def fetch_one(type, id):
-    return controller.fetch_one(type, id)
+class RelatedView(MethodView):
+    pass
 
 
-@blueprint.route('/<type>/<id>/<relationship>', methods=['GET'])
-def fetch_related(type, id, relationship):
-    return controller.fetch_related(type, id, relationship)
-
-
-@blueprint.route('/<type>/<id>/relationships/<relationship>', methods=['GET'])
-def fetch_relationship(type, id, relationship):
-    return controller.fetch_relationship(type, id, relationship)
-
-
-@blueprint.route('/<type>', methods=['POST'])
-def create(type):
-    return controller.create(type)
-
-
-@blueprint.route('/<type>/<id>', methods=['DELETE'])
-def delete(type, id):
-    return controller.delete(type, id)
-
-
-@blueprint.route('/<type>/<id>', methods=['PATCH'])
-def update(type, id):
-    return controller.update(type, id)
-
-
-@blueprint.route(
-    '/<type>/<id>/relationships/<relationship>',
-    methods=['PATCH']
-)
-def update_relationship(type, id, relationship):
-    return controller.update_relationship(type, id, relationship)
-
-
-@blueprint.route('/<type>/<id>/relationships/<relationship>', methods=['POST'])
-def create_relationship(type, id, relationship):
-    return controller.create_relationship(type, id, relationship)
-
-
-@blueprint.route(
-    '/<type>/<id>/relationships/<relationship>',
-    methods=['DELETE']
-)
-def delete_relationship(type, id, relationship):
-    return controller.delete_relationship(type, id, relationship)
+class RelationshipView(MethodView):
+    pass

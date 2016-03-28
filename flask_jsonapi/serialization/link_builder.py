@@ -4,25 +4,30 @@ from . import resource_identifier
 
 
 def resource_self_link(resource, model):
-    data = resource_identifier.dump(resource=resource, model=model)
-    return url_for('jsonapi.fetch_one', _external=True, **data)
+    return url_for(
+        '{}.resource'.format(resource.type),
+        id=model.id,
+        _external=True
+    )
 
 
 def relationship_self_link(relationship, model):
-    data = resource_identifier.dump(resource=relationship.parent, model=model)
     return url_for(
-        'jsonapi.fetch_relationship',
-        relationship=relationship.name,
-        _external=True,
-        **data
+        '{type}.relationship_{relationship}'.format(
+            type=relationship.parent.type,
+            relationship=relationship.name
+        ),
+        id=model.id,
+        _external=True
     )
 
 
 def relationship_related_link(relationship, model):
-    data = resource_identifier.dump(resource=relationship.parent, model=model)
     return url_for(
-        'jsonapi.fetch_related',
-        relationship=relationship.name,
-        _external=True,
-        **data
+        '{type}.related_{relationship}'.format(
+            type=relationship.parent.type,
+            relationship=relationship.name
+        ),
+        id=model.id,
+        _external=True
     )

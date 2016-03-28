@@ -1,7 +1,10 @@
 from . import exceptions
+from .views import RelatedView, RelationshipView, ResourceView
 
 
 class Resource(object):
+    view_cls = ResourceView
+
     def __init__(
         self,
         type,
@@ -100,6 +103,9 @@ class Attribute(Field):
 
 
 class Relationship(Field):
+    related_view_cls = RelatedView
+    relationship_view_cls = RelationshipView
+
     def __init__(
         self,
         name,

@@ -1,20 +1,12 @@
 import pytest
 
 
-@pytest.fixture(params=[
-    'flask_jsonapi.controllers.default.DefaultController',
-    'flask_jsonapi.controllers.postgresql.PostgreSQLController',
-])
-def controller_class(request):
-    return request.param
-
-
 class TestFetchOne(object):
     @pytest.fixture
     def response(self, client, fantasy_database):
         return client.get('/books/1')
 
-    def test_responds_with_200_status_code(self, app, response):
+    def test_responds_with_200_status_code(self, response):
         assert response.status_code == 200
 
     def test_returns_requested_resource(self, response):
@@ -35,7 +27,7 @@ class TestResourceNotFound(object):
         assert response.status_code == 404
 
     def test_returns_resource_not_found_error(self, response):
-        assert response.json['errors'][0]['code'] == 'ResourceNotFound'
+        assert response.json['errors'][0]['title'] == 'Resource Not Found'
 
 
 class TestIncludeRelatedResources(object):
@@ -72,15 +64,3 @@ class TestSparseFieldsets(object):
         assert self_link == (
             'http://example.com/books/1?fields%5Bbooks%5D=title'
         )
-
-
-class TestResourceTypeNotFound(object):
-    @pytest.fixture
-    def response(self, client):
-        return client.get('/foobars/1')
-
-    def test_responds_with_404_status_code(self, response):
-        assert response.status_code == 404
-
-    def test_returns_invalid_resource_error(self, response):
-        assert response.json['errors'][0]['code'] == 'ResourceTypeNotFound'
