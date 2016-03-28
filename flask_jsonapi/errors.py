@@ -48,7 +48,7 @@ class Error(object):
         }
 
     def __str__(self):
-        return '{}: {}'.format(self.source_pointer, self.detail)
+        return self.detail
 
 
 class JSONAPIException(Exception):
@@ -58,12 +58,12 @@ class JSONAPIException(Exception):
         self.errors = errors
 
     @property
-    def status_code(self):
-        status_codes = {error.status_code for error in self.errors}
-        if len(status_codes) > 1:
+    def status(self):
+        statuses = {error.status for error in self.errors}
+        if len(statuses) > 1:
             return '400'
         else:
-            return self.errors[0].status_code
+            return self.errors[0].status
 
     @property
     def as_json(self):
@@ -80,131 +80,136 @@ class ResourceNotFound(Error):
         detail = (
             'The resource identified by ({type}, {id}) type-id pair could not '
             'be found.'
-        ).format(
-            type=json.dumps(type),
-            id=json.dumps(id)
         )
+        detail = detail.format(type=json.dumps(type), id=json.dumps(id))
         Error.__init__(
             self,
             status='404',
-            title='Resource not found',
+            title='Resource Not Found',
             detail=detail
         )
 
 
-class FieldTypeMissing(Error):
-    status = '400'
-    title = 'Field type missing'
-    detail = 'fields must specify a type.'
-    source_parameter = 'fields'
+class InvalidFieldsFormat(Error):
+    def __init__(self):
+        Error.__init__(
+            self,
+            status='400',
+            title='Invalid Fields Format',
+            detail='Fields parameter must specify type',
+            source_parameter='fields'
+        )
 
 
-class InvalidFieldFormat(Error):
-    status = '400'
-    title = 'Invalid field format'
-    detail = (
-        'The value of fields[{self.type}] parameter must be a '
-        'comma-separated list that refers to the name(s) of the fields to be '
-        'returned.'
-    )
-    source_parameter = 'fields[{self.type}]'
-
+class InvalidResourceType(Error):
     def __init__(self, type):
         self.type = type
-        Error.__init__(self)
+        Error.__init__(
+            self,
+            status='400',
+            title='Invalid Resource Type',
+            detail='"{type}" is not a valid resource type'.format(type=type),
+            source_parameter='fields[{type}]'.format(type=type)
+        )
 
 
-class InvalidFieldType(Error):
-    status = '400'
-    title = 'Invalid field'
-    detail = '{self.type} is not a valid resource type.'
-    source_parameter = 'fields[{self.type}]'
-
+class InvalidFieldsValueFormat(Error):
     def __init__(self, type):
         self.type = type
-        Error.__init__(self)
+        Error.__init__(
+            self,
+            status='400',
+            title='Invalid Fields Value Format',
+            detail=(
+                'The value must be a comma-separated list that refers to the '
+                'name(s) of the fields to be returned'
+            ),
+            source_parameter='fields[{type}]'.format(type=type)
+        )
 
 
 class InvalidField(Error):
-    status = '400'
-    title = 'Invalid field'
-    detail = '{self.field} is not a valid field for {self.type}.'
-    source_parameter = 'fields[{self.type}]'
-
     def __init__(self, type, field):
         self.type = type
         self.field = field
-        Error.__init__(self)
-
-
-class InvalidIncludeFormat(Error):
-    status = '400'
-    title = 'Invalid include format'
-    detail = (
-        'The value of include parameter must be a comma-separated list of '
-        'relationship paths.'
-    )
-    source_parameter = 'include'
+        Error.__init__(
+            self,
+            status='400',
+            title='Invalid Field',
+            detail='"{field}" is not a valid field for "{type}"'.format(
+                field=field,
+                type=type
+            ),
+            source_parameter='fields[{type}]'.format(type=type)
+        )
 
 
 class InvalidInclude(Error):
-    status = '400'
-    title = 'Invalid include'
-    detail = '{self.relationship} is not a valid relationship of {self.type}.'
-    source_parameter = 'include'
-
     def __init__(self, type, relationship):
         self.type = type
         self.relationship = relationship
-        Error.__init__(self)
+
+        detail = '"{relationship}" is not a valid relationship of "{type}"'
+        detail = detail.format(type=type, relationship=relationship)
+
+        Error.__init__(
+            self,
+            status='400',
+            title='Invalid Include',
+            detail=detail,
+            source_parameter='include'
+        )
 
 
-class InvalidSortFormat(Error):
-    status = '400'
-    title = 'Invalid sort format'
-    detail = (
-        'The sort parameter must be a comma-separated list of sort fields.'
-    )
-    source_parameter = 'sort'
-
-
-class InvalidSortField(Error):
-    status = '400'
-    title = 'Invalid sort field'
-    detail = '{self.field} is not a sortable field for {self.type}.'
-    source_parameter = 'sort'
-
-    def __init__(self, type, field):
-        self.type = type
-        self.field = field
-        Error.__init__(self)
+class InvalidIncludeFormat(Error):
+    def __init__(self):
+        Error.__init__(
+            self,
+            status='400',
+            title='Invalid Include Format',
+            detail=(
+                'The value of the include parameter must be a comma-separated '
+                'list of relationship paths'
+            ),
+            source_parameter='include'
+        )
 
 
 class InvalidPageFormat(Error):
-    status = '400'
-    title = 'Invalid page format'
-    source_parameter = 'page'
+    def __init__(self):
+        Error.__init__(
+            self,
+            status='400',
+            title='Invalid Page Format',
+            detail='Page parameter must be an object',
+            source_parameter='page'
+        )
 
 
 class InvalidPageParameter(Error):
-    status = '400'
-    title = 'Invalid page parameter'
-    detail = '{self.param} is not a valid page parameter.'
-    source_parameter = 'page[{self.param}]'
-
     def __init__(self, param):
-        self.param = param
-        Error.__init__(self)
+        detail = '"{param}" is not a valid page parameter'.format(param=param)
+        Error.__init__(
+            self,
+            status='400',
+            title='Invalid Page Parameter',
+            detail=detail,
+            source_parameter='page[{param}]'.format(param=param)
+        )
 
 
 class InvalidPageValue(Error):
-    status = '400'
-    title = 'Invalid page value'
-
-    def __init__(self, detail, param):
-        self.detail = detail
-        self.source_parameter = 'page[{}]'.format(param)
-        Error.__init__(self)
+    def __init__(self, param, detail=None):
+        if detail is None:
+            detail = 'Invalid value for "{param}" page parameter'
+            detail = detail.format(param=param)
+        Error.__init__(
+            self,
+            status='400',
+            title='Invalid Page Value',
+            detail=detail,
+            source_parameter='page[{param}]'.format(param=param)
+        )
 
 
 class ParameterNotAllowed(Error):
@@ -231,7 +236,7 @@ class ValidationError(Error):
         Error.__init__(
             self,
             status='400',
-            title='Validation error',
+            title='Validation Error',
             detail=detail,
             source_path=source_path
         )
@@ -250,7 +255,7 @@ class TypeMismatch(Error):
         Error.__init__(
             self,
             status='409',
-            title='Type mismatch',
+            title='Type Mismatch',
             detail=detail,
             source_path=source_path
         )

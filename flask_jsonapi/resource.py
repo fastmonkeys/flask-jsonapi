@@ -1,5 +1,4 @@
 from . import exceptions
-from .paginator import PagedPaginator
 
 
 class Resource(object):
@@ -8,7 +7,6 @@ class Resource(object):
         type,
         store,
         fields,
-        paginator=None,
         attribute_serializer=None,
         attribute_deserializer=None,
         allow_client_generated_ids=False
@@ -20,11 +18,12 @@ class Resource(object):
         self.attributes = {}
         self.relationships = {}
         self._add_fields(fields)
-        self.paginator = PagedPaginator() if paginator is None else paginator
         self.allow_client_generated_ids = allow_client_generated_ids
         self.attribute_serializer = attribute_serializer
         self.attribute_deserializer = attribute_deserializer
         self.id_deserializer = int
+        self.max_page_size = 100
+        self.default_page_size = 20
 
     def _add_fields(self, fields):
         for field in fields:

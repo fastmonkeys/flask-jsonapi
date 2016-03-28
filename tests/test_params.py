@@ -1,101 +1,182 @@
 import pytest
 
-from flask_jsonapi import errors
-from flask_jsonapi.params import FieldsParameter, IncludeParameter
+from flask_jsonapi.errors import (
+    InvalidField,
+    InvalidFieldsFormat,
+    InvalidFieldsValueFormat,
+    InvalidInclude,
+    InvalidIncludeFormat,
+    InvalidPageFormat,
+    InvalidPageParameter,
+    InvalidPageValue,
+    InvalidResourceType,
+    JSONAPIException
+)
+from flask_jsonapi.params import (
+    Page,
+    parse_fields_parameter,
+    parse_include_parameter,
+    parse_page_parameter
+)
 
 
-class TestFieldsParameter(object):
+class TestParseFieldsParameter(object):
     def test_missing_fields_parameter(self, resource_registry):
-        fields = FieldsParameter(resource_registry, fields=None)
-        assert fields['series'] == {'books', 'title'}
-        assert fields['authors'] == {
-            'books',
-            'date_of_birth',
-            'date_of_death',
-            'name',
-        }
-        assert fields['books'] == {
-            'author',
-            'chapters',
-            'date_published',
-            'series',
-            'stores',
-            'title',
-        }
-        assert fields['chapters'] == {'title', 'ordering', 'book'}
-        assert fields['stores'] == {'name', 'books'}
+        fields = parse_fields_parameter(resource_registry, value=None)
+        assert fields == {}
 
-    def test_invalid_fields_parameter(self, resource_registry):
-        with pytest.raises(errors.FieldTypeMissing):
-            FieldsParameter(resource_registry, fields='invalid')
+    def test_invalid_fields_format(self, resource_registry):
+        with pytest.raises(JSONAPIException) as excinfo:
+            parse_fields_parameter(
+                resource_registry,
+                value='invalid'
+            )
+        assert isinstance(excinfo.value.errors[0], InvalidFieldsFormat)
 
-    def test_invalid_field_type(self, resource_registry):
-        with pytest.raises(errors.InvalidFieldType) as exc_info:
-            FieldsParameter(resource_registry, fields={'invalid': ''})
-        assert exc_info.value.type == 'invalid'
+    def test_invalid_resource_type(self, resource_registry):
+        with pytest.raises(JSONAPIException) as excinfo:
+            parse_fields_parameter(
+                resource_registry,
+                value={'invalid': ''}
+            )
+        error = excinfo.value.errors[0]
+        assert isinstance(error, InvalidResourceType)
+        assert error.type == 'invalid'
 
     def test_invalid_field(self, resource_registry):
-        with pytest.raises(errors.InvalidField) as exc_info:
-            FieldsParameter(resource_registry, fields={'series': 'invalid'})
-        assert exc_info.value.type == 'series'
-        assert exc_info.value.field == 'invalid'
-
-    def test_invalid_field_format(self, resource_registry):
-        with pytest.raises(errors.InvalidFieldFormat) as exc_info:
-            FieldsParameter(
+        with pytest.raises(JSONAPIException) as excinfo:
+            parse_fields_parameter(
                 resource_registry,
-                fields={'series': ['foo', 'bar']}
+                value={'series': 'invalid'}
             )
-        assert exc_info.value.type == 'series'
+        error = excinfo.value.errors[0]
+        assert isinstance(error, InvalidField)
+        assert error.type == 'series'
+        assert error.field == 'invalid'
 
-    def test_restricts_fields_to_be_returned(self, resource_registry):
-        fields = FieldsParameter(resource_registry, fields={
-            'books': 'title,date_published,author',
-            'authors': 'name'
-        })
+    def test_invalid_fields_value_format(self, resource_registry):
+        with pytest.raises(JSONAPIException) as excinfo:
+            parse_fields_parameter(
+                resource_registry,
+                value={'series': ['foo', 'bar']}
+            )
+        error = excinfo.value.errors[0]
+        assert isinstance(error, InvalidFieldsValueFormat)
+        assert error.type == 'series'
+
+    def test_valid_fields_parameter(self, resource_registry):
+        fields = parse_fields_parameter(
+            resource_registry,
+            value={
+                'books': 'title,date_published,author',
+                'authors': 'name',
+            }
+        )
+
+        assert len(fields) == 2
         assert fields['books'] == {'title', 'date_published', 'author'}
         assert fields['authors'] == {'name'}
 
-    def test___repr__(self, resource_registry):
-        fields = FieldsParameter(resource_registry, fields={'authors': 'name'})
-        assert repr(fields) == "<FieldsParameter {'authors': ['name']}>"
 
-
-class TestIncludeParameter(object):
+class TestParseIncludeParameter(object):
     @pytest.mark.parametrize(
-        ('include', 'tree'),
+        ('input', 'output'),
         [
+            (None, {}),
             ('', {}),
             ('books', {'books': {}}),
             ('books.author', {'books': {'author': {}}}),
             ('books.author,books', {'books': {'author': {}}}),
         ]
     )
-    def test_tree(self, resource_registry, include, tree):
-        assert IncludeParameter(
+    def test_valid_include(self, resource_registry, input, output):
+        assert parse_include_parameter(
             resource=resource_registry.by_type['stores'],
-            include=include
-        ).tree == tree
+            value=input
+        ) == output
 
     def test_invalid_relationship(self, resource_registry):
-        with pytest.raises(errors.InvalidInclude) as exc_info:
-            IncludeParameter(
+        with pytest.raises(JSONAPIException) as excinfo:
+            parse_include_parameter(
                 resource=resource_registry.by_type['stores'],
-                include='books.invalid'
+                value='books.invalid'
             )
-        assert exc_info.value.type == 'books'
-        assert exc_info.value.relationship == 'invalid'
+        error = excinfo.value.errors[0]
+        assert isinstance(error, InvalidInclude)
+        assert error.type == 'books'
+        assert error.relationship == 'invalid'
 
     def test_invalid_format(self, resource_registry):
-        with pytest.raises(errors.InvalidIncludeFormat):
-            IncludeParameter(
+        with pytest.raises(JSONAPIException) as excinfo:
+            parse_include_parameter(
                 resource=resource_registry.by_type['stores'],
-                include={'foo': 'bar'}
+                value={'foo': 'bar'}
             )
+        error = excinfo.value.errors[0]
+        assert isinstance(error, InvalidIncludeFormat)
 
-    def test___repr__(self, resource_registry):
-        include = IncludeParameter(
-            resource=resource_registry.by_type['stores'],
-            include='books.author,books'
+
+class TestParsePageParameter(object):
+    @pytest.fixture
+    def resource(self, resource_registry):
+        return resource_registry.by_type['books']
+
+    def test_extra_parameters_raises_error(self, resource):
+        with pytest.raises(JSONAPIException) as excinfo:
+            parse_page_parameter(resource=resource, value={'foo': 'bar'})
+        error = excinfo.value.errors[0]
+        assert isinstance(error, InvalidPageParameter)
+        assert error.source_parameter == 'page[foo]'
+
+    def test_defaults(self, resource):
+        page = parse_page_parameter(resource=resource, value=None)
+        assert page == Page(number=1, size=20)
+
+    def test_custom_page(self, resource):
+        page = parse_page_parameter(
+            resource=resource,
+            value={'number': '2', 'size': '50'}
         )
-        assert repr(include) == "<IncludeParameter 'books.author,books'>"
+        assert page == Page(number=2, size=50)
+
+    def test_too_low_size_raises_error(self, resource):
+        with pytest.raises(JSONAPIException) as excinfo:
+            parse_page_parameter(resource=resource, value={'size': '0'})
+        error = excinfo.value.errors[0]
+        assert isinstance(error, InvalidPageValue)
+        assert error.source_parameter == 'page[size]'
+
+    def test_too_high_size_raises_error(self, resource):
+        with pytest.raises(JSONAPIException) as excinfo:
+            parse_page_parameter(resource=resource, value={'size': '101'})
+        error = excinfo.value.errors[0]
+        assert isinstance(error, InvalidPageValue)
+        assert error.detail == 'Page size exceeds the maximum page size of 100'
+        assert error.source_parameter == 'page[size]'
+
+    def test_too_low_number_raises_error(self, resource):
+        with pytest.raises(JSONAPIException) as excinfo:
+            parse_page_parameter(resource=resource, value={'number': '0'})
+        error = excinfo.value.errors[0]
+        assert isinstance(error, InvalidPageValue)
+        assert error.source_parameter == 'page[number]'
+
+    def test_invalid_number_type(self, resource):
+        with pytest.raises(JSONAPIException) as excinfo:
+            parse_page_parameter(resource=resource, value={'number': 'foobar'})
+        error = excinfo.value.errors[0]
+        assert isinstance(error, InvalidPageValue)
+        assert error.source_parameter == 'page[number]'
+
+    def test_invalid_size_type(self, resource):
+        with pytest.raises(JSONAPIException) as excinfo:
+            parse_page_parameter(resource=resource, value={'size': 'foobar'})
+        error = excinfo.value.errors[0]
+        assert isinstance(error, InvalidPageValue)
+        assert error.source_parameter == 'page[size]'
+
+    def test_invalid_format(self, resource):
+        with pytest.raises(JSONAPIException) as excinfo:
+            parse_page_parameter(resource=resource, value='foobar')
+        error = excinfo.value.errors[0]
+        assert isinstance(error, InvalidPageFormat)

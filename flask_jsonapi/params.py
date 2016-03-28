@@ -1,133 +1,134 @@
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 
-from . import errors
+from .errors import (
+    InvalidField,
+    InvalidFieldsFormat,
+    InvalidFieldsValueFormat,
+    InvalidInclude,
+    InvalidIncludeFormat,
+    InvalidPageFormat,
+    InvalidPageParameter,
+    InvalidPageValue,
+    InvalidResourceType,
+    JSONAPIException
+)
 
-
-# fields[articles]=title,body&fields[people]=name
-
-# include=comments
-# include=comments.author
-# include=author,comments.author
-
-# sort=age
-# sort=age,name
-# sort=-created,title
-# sort=author.name
-
-# page[number]=2&page[size]=10
-# page[offset]=25&page[limit]=100
-
-# filter[title]=hello
-
-class Parameters(object):
-    def __init__(self, resource_registry, type, params):
-        resource = resource_registry.by_type[type]
-
-        self.raw = params.copy()
-
-        self.fields = FieldsParameter(
-            resource_registry,
-            params.pop('fields', None)
-        )
-        self.include = IncludeParameter(
-            resource=resource_registry.by_type[type],
-            include=params.pop('include', None)
-        )
-        self.pagination = resource.paginator.paginate(
-            params.pop('page', {})
-        )
-
-        if params:
-            raise errors.ParametersNotAllowed(params.keys())
+Page = namedtuple('Page', ['number', 'size'])
 
 
-class FieldsParameter(object):
-    def __init__(self, resource_registry, fields):
-        if fields is None:
-            fields = {}
-        self.raw = fields
-        self._resource_registry = resource_registry
-        self.requested = self._parse()
+def parse_fields_parameter(resource_registry, value):
+    if value is None:
+        value = {}
 
-    def _parse(self):
+    fields = {}
+
+    try:
+        field_items = value.items()
+    except AttributeError:
+        raise JSONAPIException(InvalidFieldsFormat())
+
+    for type, field_names in field_items:
         try:
-            field_items = self.raw.items()
-        except AttributeError:
-            raise errors.FieldTypeMissing()
-        return {
-            type: self._parse_requested_field_names(type, field_names)
-            for type, field_names in field_items
-        }
-
-    def _parse_requested_field_names(self, type, field_names):
-        resource = self._get_resource(type)
-        field_names = self._split_field_names(resource, field_names)
-        self._validate_field_names(resource, field_names)
-        return field_names
-
-    def _get_resource(self, type):
-        try:
-            return self._resource_registry.by_type[type]
+            resource = resource_registry.by_type[type]
         except KeyError:
-            raise errors.InvalidFieldType(type)
+            raise JSONAPIException(InvalidResourceType(type=type))
 
-    def _split_field_names(self, resource, field_names):
         try:
-            return field_names.split(',')
+            field_names = field_names.split(',')
         except AttributeError:
-            raise errors.InvalidFieldFormat(resource.type)
+            raise JSONAPIException(InvalidFieldsValueFormat(type=type))
 
-    def _validate_field_names(self, resource, field_names):
         for field_name in field_names:
             if field_name not in resource.fields:
-                raise errors.InvalidField(resource.type, field_name)
+                raise JSONAPIException(
+                    InvalidField(type=resource.type, field=field_name)
+                )
 
-    def __getitem__(self, type):
-        try:
-            return set(self.requested[type])
-        except KeyError:
-            return set(self._resource_registry.by_type[type].fields)
+        fields[type] = set(field_names)
 
-    def __iter__(self):
-        return iter(self.requested.keys())
-
-    def __repr__(self):
-        return '<FieldsParameter {!r}>'.format(self.requested)
+    return fields
 
 
-class IncludeParameter(object):
-    def __init__(self, resource, include):
-        self._resource = resource
-        self.raw = include
-        self.paths = self._parse_paths()
-        self.tree = OrderedDict()
-        self._build_tree()
+def parse_page_parameter(resource, value):
+    if value is None:
+        value = {}
 
-    def _build_tree(self):
-        for path in self.paths:
-            self._add_relationship_path_to_tree(path)
+    _validate_page_params(value)
 
-    def _parse_paths(self):
-        if not self.raw:
-            return []
-        try:
-            paths = self.raw.split(',')
-        except AttributeError:
-            raise errors.InvalidIncludeFormat()
-        return [p.split('.') for p in paths]
+    return Page(
+        number=_parse_page_number(value),
+        size=_parse_page_size(resource, value)
+    )
 
-    def _add_relationship_path_to_tree(self, path):
-        current_node = self.tree
-        resource = self._resource
-        for name in path:
-            if name not in current_node:
-                current_node[name] = OrderedDict()
+
+def _validate_page_params(value):
+    try:
+        keys = value.keys()
+    except AttributeError:
+        raise JSONAPIException(InvalidPageFormat())
+
+    for key in keys:
+        if key not in {'number', 'size'}:
+            raise JSONAPIException(InvalidPageParameter(param=key))
+
+
+def _parse_page_number(value):
+    try:
+        number = int(value.get('number', 1))
+    except ValueError:
+        raise JSONAPIException(InvalidPageValue(param='number'))
+
+    if number < 1:
+        raise JSONAPIException(InvalidPageValue(param='number'))
+
+    return number
+
+
+def _parse_page_size(resource, value):
+    try:
+        size = int(value.get('size', resource.default_page_size))
+    except ValueError:
+        raise JSONAPIException(InvalidPageValue(param='size'))
+
+    if size < 1:
+        raise JSONAPIException(InvalidPageValue(param='size'))
+
+    if size > resource.max_page_size:
+        detail = 'Page size exceeds the maximum page size of {max_page_size}'
+        detail = detail.format(max_page_size=resource.max_page_size)
+        raise JSONAPIException(InvalidPageValue(detail=detail, param='size'))
+
+    return size
+
+
+def parse_include_parameter(resource, value):
+    if value is None:
+        value = ''
+
+    root = OrderedDict()
+
+    if value == '':
+        return root
+
+    try:
+        relationship_paths = value.split(',')
+    except AttributeError:
+        raise JSONAPIException(InvalidIncludeFormat())
+
+    for relationship_path in relationship_paths:
+        current_node = root
+        current_resource = resource
+        for relationship_name in relationship_path.split('.'):
+            relationships = current_resource.relationships
             try:
-                relationship = resource.relationships[name]
+                relationship = relationships[relationship_name]
             except KeyError:
-                raise errors.InvalidInclude(resource.type, name)
-            resource = relationship.resource
-            current_node = current_node[name]
+                raise JSONAPIException(InvalidInclude(
+                    type=current_resource.type,
+                    relationship=relationship_name
+                ))
+            current_resource = relationship.resource
+            current_node.setdefault(relationship_name, OrderedDict())
+            current_node = current_node[relationship_name]
 
-    def __repr__(self):
-        return '<IncludeParameter {raw!r}>'.format(raw=self.raw)
+    return root
