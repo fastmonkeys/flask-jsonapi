@@ -74,9 +74,9 @@ class JSONAPIException(Exception):
 
 
 class ResourceNotFound(Error):
-    def __init__(self, type, id):
+    def __init__(self, type, id, source_path=None):
         detail = (
-            'The resource identified by type "{type}" and id "{id}") could '
+            'The resource identified by type "{type}" and id "{id}" could '
             'not be found'
         )
         detail = detail.format(type=type, id=id)
@@ -84,7 +84,8 @@ class ResourceNotFound(Error):
             self,
             status='404',
             title='Resource Not Found',
-            detail=detail
+            detail=detail,
+            source_path=source_path
         )
 
 

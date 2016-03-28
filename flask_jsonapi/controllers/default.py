@@ -3,52 +3,12 @@ from flask import abort, current_app, json, request
 from werkzeug.urls import url_encode
 
 from .. import errors, exceptions, serialization
-from ..params import Parameters
 from ..request_parser import RequestParser
 
 
 class DefaultController(object):
     def __init__(self, resource_registry):
         self.resource_registry = resource_registry
-
-    def fetch(self, type):
-        resource = self._get_resource(type)
-        params = self._build_params(type)
-
-        ###
-        instances = resource.store.fetch(resource.model_class, params)
-        count = resource.store.count(resource.model_class)
-        links = serializer.dump_resource_collection_links(
-            type=type,
-            params=params
-        )
-        data = serializer.dump_document(
-            resource_registry=self.resource_registry,
-            params=params,
-            input=instances,
-            links=links,
-            many=True
-        )
-        return json.dumps(data)
-
-    def fetch_one(self, type, id):
-        resource = self._get_resource(type)
-        params = self._build_params(type)
-
-        ###
-        instance = self._fetch_object(resource, id, params)
-        links = serializer.dump_individual_resource_links(
-            type=type,
-            id=id,
-            params=params
-        )
-        data = serializer.dump_document(
-            resource_registry=self.resource_registry,
-            params=params,
-            input=instance,
-            links=links
-        )
-        return json.dumps(data)
 
     def fetch_related(self, type, id, relationship):
         resource = self._get_resource(type)
@@ -137,18 +97,6 @@ class DefaultController(object):
         resource.store.update(instance=instance, fields=result.fields)
         links = self._get_links(params)
         return self._serialize(instance, params, links)
-
-    def delete(self, type, id):
-        resource = self._get_resource(type)
-
-        ###
-        try:
-            instance = resource.store.fetch_one(resource.model_class, id)
-        except exceptions.ObjectNotFound:
-            pass
-        else:
-            resource.store.delete(instance)
-        return current_app.response_class(response='', status=204)
 
     def create_relationship(self, type, id, relationship):
         resource = self._get_resource(type)
@@ -239,13 +187,6 @@ class DefaultController(object):
             return resource.relationships[relationship_name]
         except KeyError:
             raise errors.RelationshipNotFound(resource.type, relationship_name)
-
-    def _build_params(self, type):
-        return Parameters(
-            resource_registry=self.resource_registry,
-            type=type,
-            params=qstring.nest(request.args.items(multi=True))
-        )
 
     def _get_links(self, params, count=None):
         links = {

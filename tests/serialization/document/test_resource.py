@@ -17,7 +17,7 @@ def series(db, models, fantasy_database):
     return db.session.query(models.Series).filter_by(id=1).one()
 
 
-def test_single_resource(jsonapi, resource_registry, book, db):
+def test_single_resource(resource_registry, book, db):
     data = document.resource.dump(
         resource=resource_registry.by_type['books'],
         model=book
@@ -94,7 +94,7 @@ def test_single_resource(jsonapi, resource_registry, book, db):
     }
 
 
-def test_null_resource(jsonapi, resource_registry, db):
+def test_null_resource(resource_registry, db):
     data = document.resource.dump(
         resource=resource_registry.by_type['books'],
         model=None
@@ -104,7 +104,7 @@ def test_null_resource(jsonapi, resource_registry, db):
     }
 
 
-def test_sparse_fieldsets(jsonapi, resource_registry, book, db):
+def test_sparse_fieldsets(resource_registry, book, db):
     data = document.resource.dump(
         resource=resource_registry.by_type['books'],
         model=book,
@@ -137,9 +137,7 @@ def test_sparse_fieldsets(jsonapi, resource_registry, book, db):
     }
 
 
-def test_inclusion_of_related_resources(
-    jsonapi, resource_registry, series, db
-):
+def test_inclusion_of_related_resources(resource_registry, series, db):
     data = document.resource.dump(
         resource=resource_registry.by_type['series'],
         model=series,

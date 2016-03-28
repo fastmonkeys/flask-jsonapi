@@ -10,7 +10,7 @@ def books(db, models, fantasy_database):
     return db.session.query(models.Book).all()
 
 
-def test_resource_collection(jsonapi, resource_registry, books, db):
+def test_resource_collection(resource_registry, books, db):
     data = document.resource_collection.dump(
         resource=resource_registry.by_type['books'],
         models=books

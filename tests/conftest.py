@@ -38,9 +38,7 @@ def app(db, resources):
     app = JSONAPI(__name__)
 
     app.config['SERVER_NAME'] = 'example.com'
-    app.config['SQLALCHEMY_DATABASE_URI'] = (
-        'postgres://localhost/flask_json_api'
-    )
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['TESTING'] = True
 
@@ -60,8 +58,8 @@ def db():
 
 
 @pytest.fixture
-def resource_registry(jsonapi):
-    return jsonapi.resources
+def resource_registry(app):
+    return app._resource_registry
 
 
 @pytest.fixture
@@ -152,7 +150,7 @@ def resources(db, models):
 
 
 @pytest.yield_fixture
-def fantasy_database(db, models):
+def fantasy_database(app, db):
     with open(FANTASY_DATABASE_FILENAME, 'r') as f:
         data = json.loads(f.read())
 
@@ -168,18 +166,23 @@ def fantasy_database(db, models):
                     row[column] = datetime.strptime(value, '%Y-%m-%d').date()
 
         connection.execute(table.insert(), rows)
-        if table.name != 'books_stores':
-            connection.execute(
-                'ALTER SEQUENCE {table}_id_seq RESTART WITH {num_rows}'.format(
-                    table=table.name,
-                    num_rows=len(rows) + 1
-                )
-            )
+        # if table.name != 'books_stores':
+        #     # connection.execute(
+        #     #     'ALTER SEQUENCE {table}_id_seq RESTART WITH {num_rows}'.format(
+        #     #         table=table.name,
+        #     #         num_rows=len(rows) + 1
+        #     #     )
+        #     # )
+        #     connection.execute(
+        #         'UPDATE sqlite_sequence SET seq = :seq WHERE name = :table',
+        #         seq=len(rows) + 1,
+        #         table=table.name
+        #     )
 
     yield
 
     for table in reversed(db.metadata.sorted_tables):
-        db.session.execute('DROP TABLE {0} CASCADE'.format(table.name))
+        db.session.execute('DROP TABLE {0}'.format(table.name))
     db.session.commit()
 
     db.session.close_all()

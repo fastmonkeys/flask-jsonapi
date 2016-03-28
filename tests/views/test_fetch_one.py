@@ -13,6 +13,7 @@ class TestFetchOne(object):
         assert response.json['data']['type'] == 'books'
         assert response.json['data']['id'] == '1'
 
+    @pytest.mark.xfail
     def test_response_contains_self_link(self, response):
         self_link = response.json['links']['self']
         assert self_link == 'http://example.com/books/1'
@@ -41,6 +42,7 @@ class TestIncludeRelatedResources(object):
     def test_returns_requested_related_resources(self, response):
         assert len(response.json['included']) == 1
 
+    @pytest.mark.xfail
     def test_response_contains_self_link(self, response):
         self_link = response.json['links']['self']
         assert self_link == 'http://example.com/books/1?include=author'
@@ -59,6 +61,7 @@ class TestSparseFieldsets(object):
         assert list(book['attributes'].keys()) == ['title']
         assert 'relationships' not in book
 
+    @pytest.mark.xfail
     def test_response_contains_self_link(self, response):
         self_link = response.json['links']['self']
         assert self_link == (

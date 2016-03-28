@@ -20,18 +20,6 @@ class TestSuccessfulRequest(object):
         assert fetch_response.status_code == 404
 
 
-class TestResourceTypeNotFound(object):
-    @pytest.fixture
-    def response(self, client, fantasy_database):
-        return client.delete('/foobars/1')
-
-    def test_responds_with_404_status_code(self, response):
-        assert response.status_code == 404
-
-    def test_returns_resource_type_not_found(self, response):
-        assert response.json['errors'][0]['code'] == 'ResourceTypeNotFound'
-
-
 class TestResourceNotFound(object):
     @pytest.fixture
     def response(self, client, fantasy_database):
