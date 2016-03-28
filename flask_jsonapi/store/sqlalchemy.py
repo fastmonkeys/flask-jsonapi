@@ -14,7 +14,10 @@ class SQLAlchemyStore(object):
 
     def fetch_one(self, id, **kwargs):
         try:
-            return self._fetch_one(query=self.query.filter_by(id=id), **kwargs)
+            return self._fetch_one(
+                query=self.query().filter_by(id=id),
+                **kwargs
+            )
         except orm.exc.NoResultFound:
             raise exceptions.ObjectNotFound
 
@@ -23,7 +26,10 @@ class SQLAlchemyStore(object):
 
     def fetch_one_related(self, model, relationship, **kwargs):
         try:
-            return self._fetch_one(query=self.query.filter_by(id=id), **kwargs)
+            return self._fetch_one(
+                query=self._query_related(model, relationship),
+                **kwargs
+            )
         except orm.exc.NoResultFound:
             return None
 
@@ -38,11 +44,12 @@ class SQLAlchemyStore(object):
         return query.one()
 
     def _fetch_many(self, query, include=None, page=None):
+        total = query.count()
         query = self._include_related(query, include=include)
         query = self._paginate(query, page=page)
         return Pagination(
             page=page,
-            total=query.count(),
+            total=total,
             models=query.all()
         )
 
@@ -60,11 +67,11 @@ class SQLAlchemyStore(object):
         return self.session.query(self.model_class)
 
     def _include_related(self, query, include):
-        paths = [] if include is None else include.paths
-        for path in paths:
+        include = include or {}
+        for path in _get_include_paths(include):
             option = orm.subqueryload(path[0])
-            for relation in path[1:]:
-                option = option.subqueryload(relation)
+            for relationship in path[1:]:
+                option = option.subqueryload(relationship)
             query = query.options(option)
         return query
 
@@ -109,3 +116,12 @@ class SQLAlchemyStore(object):
             except ValueError:
                 pass
         self.session.commit()
+
+
+def _get_include_paths(include):
+    for key, value in include.items():
+        if value:
+            for path in _get_include_paths(value):
+                yield (key,) + path
+        else:
+            yield (key,)
