@@ -1,5 +1,12 @@
 from . import exceptions
-from .views import RelatedView, RelationshipView, ResourceView
+from .errors import JSONAPIException, ResourceNotFound
+from .exceptions import ObjectNotFound
+from .views import (
+    RelatedView,
+    ResourceView,
+    ToManyRelationshipView,
+    ToOneRelationshipView
+)
 
 
 class Resource(object):
@@ -77,6 +84,23 @@ class Resource(object):
             )
         self._registry = registry
 
+    def fetch_one(self, id, **kwargs):
+        try:
+            return self.store.fetch_one(id, **kwargs)
+        except ObjectNotFound:
+            raise JSONAPIException(ResourceNotFound(type=self.type, id=id))
+
+    def fetch_many(self, **kwargs):
+        return self.store.fetch_many(**kwargs)
+
+    def delete(self, id):
+        try:
+            model = self.store.fetch_one(id)
+        except ObjectNotFound:
+            pass
+        else:
+            self.store.delete(model)
+
     def __repr__(self):
         return '<{cls} type={type!r}>'.format(
             cls=self.__class__.__name__,
@@ -104,7 +128,6 @@ class Attribute(Field):
 
 class Relationship(Field):
     related_view_cls = RelatedView
-    relationship_view_cls = RelationshipView
 
     def __init__(
         self,
@@ -125,6 +148,8 @@ class Relationship(Field):
 
 
 class ToOneRelationship(Relationship):
+    relationship_view_cls = ToOneRelationshipView
+
     def __init__(self, name, type, **kwargs):
         super(ToOneRelationship, self).__init__(
             name=name,
@@ -137,6 +162,8 @@ class ToOneRelationship(Relationship):
 
 
 class ToManyRelationship(Relationship):
+    relationship_view_cls = ToManyRelationshipView
+
     def __init__(self, name, type, allow_full_replacement=False, **kwargs):
         super(ToManyRelationship, self).__init__(
             name=name,

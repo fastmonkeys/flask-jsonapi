@@ -4,10 +4,9 @@ from datetime import datetime
 
 import pytest
 from bunch import Bunch
-from flask import Flask, Response
+from flask import Response
 from flask_sqlalchemy import SQLAlchemy
 from marshmallow import Schema, fields
-from werkzeug.utils import import_string
 
 from flask_jsonapi import JSONAPI
 from flask_jsonapi.resource import (
@@ -109,11 +108,14 @@ def resources(db, models):
             ToManyRelationship(
                 'chapters',
                 type='chapters',
-                allow_include=True,
-                allow_full_replacement=True
+                allow_include=True
             ),
             ToOneRelationship('series', type='series'),
-            ToManyRelationship('stores', type='stores'),
+            ToManyRelationship(
+                'stores',
+                type='stores',
+                allow_full_replacement=True
+            ),
         ],
         attribute_serializer=build_attribute_serializer(BookSchema),
         attribute_deserializer=build_attribute_deserializer(BookSchema),

@@ -7,7 +7,8 @@ def dump(*args, **kwargs):
 
 class _ResourceSerializer(_BaseSerializer):
     def __init__(self, resource, model, **kwargs):
-        super(_ResourceSerializer, self).__init__(resource, **kwargs)
+        super(_ResourceSerializer, self).__init__(**kwargs)
+        self.resource = resource
         self.model = model
 
     def _dump_primary(self):
@@ -19,4 +20,7 @@ class _ResourceSerializer(_BaseSerializer):
 
     def _dump_included(self):
         if self.model is not None:
-            return list(self._iter_included_objects(model=self.model))
+            return list(self._iter_included_objects(
+                resource=self.resource,
+                model=self.model
+            ))

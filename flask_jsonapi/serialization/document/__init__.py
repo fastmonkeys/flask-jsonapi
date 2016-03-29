@@ -1,1 +1,1 @@
-from . import resource, resource_collection
+from . import relationship, resource, resource_collection

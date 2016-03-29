@@ -42,10 +42,12 @@ class JSONAPI(Flask):
 
         for relationship in resource.relationships.values():
             related_view = relationship.related_view_cls.as_view(
-                'related_' + relationship.name
+                'related_' + relationship.name,
+                relationship=relationship
             )
             relationship_view = relationship.relationship_view_cls.as_view(
-                'relationship_' + relationship.name
+                'relationship_' + relationship.name,
+                relationship=relationship
             )
 
             blueprint.add_url_rule(

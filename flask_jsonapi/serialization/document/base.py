@@ -2,8 +2,7 @@ from .. import resource_identifier, resource_object
 
 
 class _BaseSerializer(object):
-    def __init__(self, resource, fields=None, include=None):
-        self.resource = resource
+    def __init__(self, fields=None, include=None):
         self.fields = {} if fields is None else fields
         self.include = {} if include is None else include
 
@@ -34,9 +33,9 @@ class _BaseSerializer(object):
                 fields=self.fields.get(resource.type)
             )
 
-    def _iter_included_objects(self, model):
+    def _iter_included_objects(self, resource, model):
         included_models = self._iter_included_models(
-            resource=self.resource,
+            resource=resource,
             model=model,
             include=self.include
         )

@@ -222,12 +222,13 @@ class ParameterNotAllowed(Error):
 
 
 class InvalidJSON(Error):
-    status = '400'
-    title = 'Request body is not valid JSON'
-
     def __init__(self, detail):
-        self.detail = detail
-        Error.__init__(self)
+        Error.__init__(
+            self,
+            status='400',
+            title='Invalid JSON',
+            detail=detail
+        )
 
 
 class ValidationError(Error):
@@ -279,7 +280,7 @@ class FullReplacementDisallowed(Error):
         Error.__init__(
             self,
             status='403',
-            title='Full replacement disallowed',
+            title='Full Replacement Disallowed',
             detail=detail,
             source_path=source_path
         )

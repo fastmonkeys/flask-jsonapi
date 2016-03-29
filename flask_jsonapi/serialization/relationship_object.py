@@ -23,18 +23,19 @@ def dump(relationship, model):
     return data
 
 
-def load(relationship, raw_data, replace=False):
-    parser = _RelationshipObject(relationship, replace=replace)
+def load(relationship, raw_data, replace=False, silent=False):
+    parser = _RelationshipObject(relationship, replace=replace, silent=silent)
     return parser(raw_data)['data']
 
 
 class _RelationshipObject(_parsers.Object):
-    def __init__(self, relationship, replace):
+    def __init__(self, relationship, replace, silent):
         super(_RelationshipObject, self).__init__(
             properties={
                 'data': lambda raw_data: resource_linkage.load(
                     relationship=relationship,
-                    raw_data=raw_data
+                    raw_data=raw_data,
+                    silent=silent
                 )
             },
             required=['data']

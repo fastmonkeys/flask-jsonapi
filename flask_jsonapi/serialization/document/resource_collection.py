@@ -9,10 +9,8 @@ def dump(*args, **kwargs):
 
 class _ResourceCollectionSerializer(_BaseSerializer):
     def __init__(self, resource, models, **kwargs):
-        super(_ResourceCollectionSerializer, self).__init__(
-            resource,
-            **kwargs
-        )
+        super(_ResourceCollectionSerializer, self).__init__(**kwargs)
+        self.resource = resource
         self.models = models
 
     def _dump_primary(self):
@@ -22,9 +20,8 @@ class _ResourceCollectionSerializer(_BaseSerializer):
         ]
 
     def _dump_included(self):
-        return list(
-            itertools.chain.from_iterable(
-                self._iter_included_objects(model=model)
-                for model in self.models
-            )
+        iter_included_objects = itertools.chain.from_iterable(
+            self._iter_included_objects(resource=self.resource, model=model)
+            for model in self.models
         )
+        return list(iter_included_objects)
